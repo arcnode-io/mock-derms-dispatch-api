@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="mock-derms-dispatch-api"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+    quickstart.xml, with ClassNamingConventions taught about Maven Failsafe's *IT / *ITCase
+    suffix. Reason: PMD's built-in testClassPattern only recognizes JUnit-style *Test(s)/TestCase
+    names — it doesn't know this project's integration tests are *IT by Failsafe convention.
+    This is a confirmed upstream gap (pmd/pmd#5919), not a misconfiguration on our side.
+  </description>
+
+  <rule ref="rulesets/java/quickstart.xml">
+    <exclude name="ClassNamingConventions"/>
+  </rule>
+
+  <rule ref="category/java/codestyle.xml/ClassNamingConventions">
+    <properties>
+      <property name="testClassPattern"
+                value="^Test.*$|^[A-Z][a-zA-Z0-9]*(Test|Tests|TestCase|IT|ITCase)$"/>
+    </properties>
+  </rule>
+</ruleset>

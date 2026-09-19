@@ -1,0 +1,21 @@
+# Maven
+/target/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDE (kept like the sibling templates)
+/.idea
+*.iml
+.project
+.classpath
+.settings/
+.vscode/*
+!.vscode/settings.json
+
+# secrets — never commit the filled-in file (template-secrets.env is the tracked list)
+secrets.env
+.env

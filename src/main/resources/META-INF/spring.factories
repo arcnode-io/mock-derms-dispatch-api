@@ -1,0 +1,2 @@
+# Runs before the context refreshes — lifts cfg.yml into the Environment.
+org.springframework.boot.EnvironmentPostProcessor=io.arcnode.mockderms.Config$Loader

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <suppress>
+    <notes><![CDATA[
+    CVE-2022-31691 is a Spring Security OAuth2 client hostname-validation bug, not
+    spring-boot-devtools — CPE collision on the shared vmware:spring_boot/spring_tools vendor
+    strings. devtools ships no OAuth2 client code.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.springframework\.boot/spring\-boot\-devtools@.*$</packageUrl>
+    <vulnerabilityName>CVE-2022-31691</vulnerabilityName>
+  </suppress>
+</suppressions>

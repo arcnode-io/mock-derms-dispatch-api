@@ -1,0 +1,57 @@
+stages:
+  - check
+  - publish
+  - mirror
+
+# The arcnode runner is a Debian shell executor — no `image:` / `services:` (ignored).
+# It provides git+ssh, docker, node, python, aws. Java 21 comes from openjdk-21-jdk, installed by
+# tooling-playbooks/gitlab-runner-setup.yml. The Maven wrapper pulls Maven itself.
+# Failsafe (*IT) needs Docker for the HiveMQ testcontainer — the runner has it.
+
+check:
+  stage: check
+  before_script:
+    - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+    - |
+      test -x "$JAVA_HOME/bin/javac" || { echo "openjdk-21-jdk missing on runner — run tooling-playbooks gitlab-runner-setup"; exit 1; }
+    - |
+      cat > .ci-toolchains.xml <<EOF
+      <toolchains><toolchain><type>jdk</type><provides><version>21</version></provides><configuration><jdkHome>$JAVA_HOME</jdkHome></configuration></toolchain></toolchains>
+      EOF
+    - |
+      # pipx installs land in ~/.local/bin, not reliably on PATH for a non-interactive job.
+      export PATH="$HOME/.local/bin:$PATH"
+      command -v semgrep >/dev/null || pipx install semgrep
+  script:
+    - make checks MVNW="./mvnw -B --no-transfer-progress -t .ci-toolchains.xml"
+    # one verify call — unit+integration coverage must land in the same jacoco.exec for the 70% gate
+    - ./mvnw -B --no-transfer-progress -t .ci-toolchains.xml clean verify
+    - |
+      awk -F, 'NR>1 {m+=$4; c+=$5} END {printf "Total coverage: %.1f%%\n", 100*c/(c+m)}' target/site/jacoco/jacoco.csv
+  coverage: '/Total coverage: (\d+\.\d+)%/'
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+        - target/failsafe-reports/TEST-*.xml
+    paths:
+      - target/site/jacoco/
+
+publish:
+  stage: publish
+  script:
+    - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+    - docker build -t public.ecr.aws/y1d2j6a8/mock-derms-dispatch-api .
+    - docker push public.ecr.aws/y1d2j6a8/mock-derms-dispatch-api
+
+mirror:
+  stage: mirror
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+  script:
+    - git checkout -B main
+    - git push --mirror git@github.com:arcnode-io/mock-derms-dispatch-api.git
+  only:
+    - main

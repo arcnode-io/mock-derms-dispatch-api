@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>io.arcnode</groupId>
+  <artifactId>mock-derms-dispatch-api</artifactId>
+  <version>1.0.0-beta</version>
+  <name>mock-derms-dispatch-api</name>
+  <description>Mock utility DERMS dispatch-decision service — forecast/real-time trigger intake, POST /der-events, compliance tracking</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <!-- Static-analysis / format tool versions (Boot parent manages the rest) -->
+    <springdoc.version>3.1.1</springdoc.version>
+    <wiremock.version>3.13.1</wiremock.version>
+    <paho.version>1.2.5</paho.version>
+    <spotless.version>3.10.2</spotless.version>
+    <spotbugs.version>4.10.4.1</spotbugs.version>
+    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.line.min>0.70</jacoco.line.min>
+    <!-- Named-verb layer tool versions (the poe / npm-script analog) -->
+    <build-helper.version>3.6.1</build-helper.version>
+    <pmd.version>3.28.0</pmd.version>
+    <dependency-check.version>13.0.0</dependency-check.version>
+    <!-- Boot 4.1.1 manages 11.0.24, which carries known CVEs; 11.0.25 fixes them. -->
+    <tomcat.version>11.0.25</tomcat.version>
+  </properties>
+
+  <dependencies>
+    <!-- web + validation: the zod/Pydantic analog. No persistence — this is a stateless mock,
+         in-memory state only (see readme: "rip out the JPA, it's a mock service"). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <!-- hot-reload parity with nest's start:dev watch mode / uvicorn's reload flag. optional
+         plus runtime scope so it never leaks into anything that depends on this jar (Spring
+         Initializr's own convention). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <!-- auto-configured RestClient.Builder for the outbound calls (gridstatus_api, POST
+         /der-events to ems-der-control-api) — Boot 4 split this out. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient</artifactId>
+    </dependency>
+    <!-- broker connection: dlr_rtu's live rating + the der_dispatch compliance return path
+         (same client ems-der-control-api uses for its own publish path). -->
+    <dependency>
+      <groupId>org.eclipse.paho</groupId>
+      <artifactId>org.eclipse.paho.mqttv5.client</artifactId>
+      <version>${paho.version}</version>
+    </dependency>
+
+    <!-- OpenAPI: the @nestjs/swagger analog -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>${springdoc.version}</version>
+    </dependency>
+
+    <!-- nullness contracts (records annotated @NullMarked at package level) -->
+    <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+      <version>1.0.1</version>
+    </dependency>
+
+    <!-- test: JUnit 5, Mockito, AssertJ, Spring Test -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- real broker for *PublishIT / *ConsumeIT — matches the deployed HiveMQ CE -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-hivemq</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- mocks the outbound call: the nock / pook analog. -standalone bundles its own HTTP server. -->
+    <dependency>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock-standalone</artifactId>
+      <version>${wiremock.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Force JDK 21 for compile/test even when `mvn` itself runs on another JDK.
+           Reads ~/.m2/toolchains.xml; Gradle / other tools never consult it. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-toolchains-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <toolchains>
+            <jdk>
+              <version>21</version>
+            </jdk>
+          </toolchains>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>toolchain</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- dep hygiene: the depcheck / deptry analog. Advisory — reports unused *declared*
+           deps at `verify`; does not fail the build (starter transitives make it noisy). -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <ignoreNonCompile>true</ignoreNonCompile>
+          <failOnWarning>false</failOnWarning>
+        </configuration>
+        <executions>
+          <execution>
+            <id>analyze</id>
+            <phase>verify</phase>
+            <goals><goal>analyze-only</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- adds tests/java as a second test-source root, sibling to the default src/test/java.
+           *Test (unit) stays in src/test/java; *IT (integration) lives in tests/java — matching
+           the python/typescript siblings' separate tests/ folder. Reason: testSourceDirectory
+           is a single-value POM element and would replace src/test/java wholesale, so this has
+           to be an *additional* root via build-helper, not a plain POM setting. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>${build-helper.version}</version>
+        <executions>
+          <execution>
+            <id>add-integration-test-source</id>
+            <phase>generate-test-sources</phase>
+            <goals><goal>add-test-source</goal></goals>
+            <configuration>
+              <sources>
+                <source>tests/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- format: the prettier / black analog. `spotless:apply` writes, `spotless:check` gates.
+           Reason: spotless hardcodes its own default target globs and does NOT follow extra test
+           source roots added via build-helper (diffplug/spotless#1214) — tests/java has to be
+           listed explicitly or it silently stops being formatted/checked. -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+              <include>tests/java/**/*.java</include>
+            </includes>
+            <googleJavaFormat/>
+            <importOrder/>
+            <removeUnusedImports/>
+            <formatAnnotations/>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- bug-pattern analysis (bytecode-level) — bundled under the `audit-src` verb, not `lint`.
+           Bound to `verify`. includeTests=false: never scans test classes. -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${spotbugs.version}</version>
+        <configuration>
+          <includeTests>false</includeTests>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- lint: the ruff / eslint correctness+style analog (SpotBugs is bytecode bug-pattern
+           detection, a different category — that stays under audit-src). Bound to `verify`, like
+           SpotBugs. includeTests=true mirrors the siblings' `eslint src tests`. testSourceDirectories
+           defaults to project.testCompileSourceRoots (since 3.7), so this DOES follow the
+           build-helper-added tests/java root automatically — no extra wiring needed here. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <version>${pmd.version}</version>
+        <configuration>
+          <targetJdk>${java.version}</targetJdk>
+          <includeTests>true</includeTests>
+          <rulesets>
+            <ruleset>pmd-ruleset.xml</ruleset>
+          </rulesets>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- audit-packages: the pip-audit / npm-audit analog. Not bound to a phase — only runs via
+           `make audit-packages`/`checks`. nvdApiKeyEnvironmentVariable reads NVD_API_KEY straight
+           from the env (safer than -D, which can leak into Maven debug logs). failBuildOnCVSS=7
+           matches the ts sibling's npm audit moderate threshold. -->
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <version>${dependency-check.version}</version>
+        <configuration>
+          <failBuildOnCVSS>7</failBuildOnCVSS>
+          <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+          <suppressionFiles>
+            <suppressionFile>dependency-check-suppress.xml</suppressionFile>
+          </suppressionFiles>
+        </configuration>
+      </plugin>
+
+      <!-- integration tests: *IT via Failsafe, bound to `verify` (unit *Test stays on Surefire).
+           jdkToolchain: maven-toolchains-plugin's `toolchain` goal is bound to `validate`, which a
+           bare single-goal CLI call (e.g. `mvnw failsafe:integration-test`, what `make integration`
+           runs) skips entirely — without jdkToolchain set here, Failsafe would fork its test JVM
+           under whatever JDK ran Maven itself rather than JDK 21, and choke on JDK21-compiled *IT
+           classes (class file version mismatch). This makes Failsafe resolve the toolchain itself,
+           regardless of invocation style. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <jdkToolchain>
+            <version>${java.version}</version>
+          </jdkToolchain>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- coverage: the c8 / pytest-cov analog. <rules> lives at the PLUGIN level (not nested
+           under the `check` execution) so a bare `mvnw jacoco:check` CLI call (what `make cover`
+           does) picks it up too — a bare goal invocation runs as a synthetic "default-cli"
+           execution, which only inherits plugin-level config, never config nested inside a named
+           execution (same class of gotcha as maven-failsafe-plugin's jdkToolchain above). -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <rules>
+            <rule>
+              <element>BUNDLE</element>
+              <limits>
+                <limit>
+                  <counter>LINE</counter>
+                  <value>COVEREDRATIO</value>
+                  <minimum>${jacoco.line.min}</minimum>
+                </limit>
+              </limits>
+            </rule>
+          </rules>
+        </configuration>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals><goal>prepare-agent</goal></goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals><goal>report</goal></goals>
+          </execution>
+          <execution>
+            <id>check</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

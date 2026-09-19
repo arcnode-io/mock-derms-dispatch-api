@@ -1,0 +1,17 @@
+local:
+  logLevel: DEBUG
+  port: 8080
+  host: 127.0.0.1
+  e2e: false
+  mqttBrokerUrl: tcp://localhost:1883
+  mqttUsername: arcnode_mock_derms_dispatch_api
+  siteId: site_001
+
+beta:
+  logLevel: INFO
+  port: 8080
+  host: 0.0.0.0
+  e2e: true
+  mqttBrokerUrl: tcp://hivemq:1883
+  mqttUsername: arcnode_mock_derms_dispatch_api
+  siteId: arcnode_beta
