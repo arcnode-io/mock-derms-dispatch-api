@@ -4,4 +4,8 @@
   <Match>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
   </Match>
+  <!-- JAXB-generated IEEE 2030.5 classes (src/main/resources/xsd/sep.xsd) aren't our code. -->
+  <Match>
+    <Class name="~io\.arcnode\.mockderms\.mirror\.ieee20305\..*"/>
+  </Match>
 </FindBugsFilter>

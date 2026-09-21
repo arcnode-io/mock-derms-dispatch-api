@@ -117,6 +117,34 @@ class EventOrchestratorTest {
   }
 
   @Test
+  void currentTargetWattsIsNullBeforeAnyDispatch() {
+    // Act / Assert
+    assertThat(orchestrator().currentTargetWatts()).isNull();
+  }
+
+  @Test
+  void currentTargetWattsReflectsTheActiveEventAfterDispatchAndClearsAfterClose() {
+    // Arrange: same fixture as dispatchesWithPositiveTargetActivePowerWhenTriggering, then recovers
+    given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
+    given(loadGenerator.currentLoadingAmps()).willReturn(560.0, 400.0, 400.0, 400.0);
+    given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
+    given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_STRESSED)).willReturn(false);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_STRESSED)).willReturn(50.0);
+    EventOrchestrator orchestrator = orchestrator();
+
+    // Act / Assert: dispatch -> target visible
+    orchestrator.tick();
+    assertThat(orchestrator.currentTargetWatts()).isEqualTo(138_000.0);
+
+    // Act / Assert: sustained recovery -> closes -> target clears
+    orchestrator.tick();
+    orchestrator.tick();
+    orchestrator.tick();
+    assertThat(orchestrator.currentTargetWatts()).isNull();
+  }
+
+  @Test
   void doesNotRedispatchOnEveryTickWhileAlreadyActive() {
     // Arrange
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);

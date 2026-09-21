@@ -42,7 +42,7 @@ public class EventOrchestrator {
   private final AtomicInteger consecutiveRecoveryTicks = new AtomicInteger();
 
   private record ActiveEvent(
-      String mrid, Instant dispatchedAt, DerEventRequest.Interval interval) {}
+      String mrid, Instant dispatchedAt, DerEventRequest.Interval interval, double targetWatts) {}
 
   public EventOrchestrator(
       DlrRatingSubscriber ratingSubscriber,
@@ -59,6 +59,17 @@ public class EventOrchestrator {
     this.client = client;
     this.config = config;
     this.clock = clock;
+  }
+
+  /**
+   * The currently-commanded target active power (watts), or {@code null} when no event is active.
+   * Read by the mirror package's own compliance comparison against the utility's real {@code
+   * MirrorUsagePoint} report — this service already knows what it dispatched, so it doesn't need
+   * that value repeated back to it, only the actual measured delivery.
+   */
+  public @Nullable Double currentTargetWatts() {
+    ActiveEvent current = activeEvent.get();
+    return current == null ? null : current.targetWatts();
   }
 
   @Scheduled(fixedDelay = 5000)
@@ -96,7 +107,7 @@ public class EventOrchestrator {
             "ACTIVE",
             interval,
             new DerEventRequest.ControlBase(targetWatts, true, null, null)));
-    activeEvent.set(new ActiveEvent(mrid, now, interval));
+    activeEvent.set(new ActiveEvent(mrid, now, interval, targetWatts));
     consecutiveRecoveryTicks.set(0);
     LOG.info(
         "dispatched mrid {} target {}W (excess {}A over margin)", mrid, targetWatts, excessAmps);
