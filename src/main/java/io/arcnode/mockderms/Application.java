@@ -2,6 +2,7 @@ package io.arcnode.mockderms;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -10,11 +11,17 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 
-/** Entry point. Boots the context; {@link StartupLogger} echoes the resolved config once ready. */
+/**
+ * Entry point. Boots the context; {@link StartupLogger} echoes the resolved config once ready.
+ * Scheduling is on so Boot provides the {@code TaskScheduler} {@link
+ * io.arcnode.mockderms.dispatch.EventOrchestrator} ticks on.
+ */
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableScheduling
 public class Application {
 
   public static void main(String[] args) {
@@ -30,6 +37,12 @@ public class Application {
                 .title("mock-derms-dispatch-api")
                 .version("1.0.0-beta")
                 .description("Mock utility DERMS dispatch-decision service"));
+  }
+
+  /** Real wall clock — swapped for {@code Clock.fixed(...)} in tests. */
+  @Bean
+  public Clock clock() {
+    return Clock.systemUTC();
   }
 
   /** Logs the bound {@link Config} at startup — the winston "Running with Config" line analog. */
