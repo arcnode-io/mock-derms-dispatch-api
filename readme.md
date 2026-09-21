@@ -15,8 +15,12 @@ testing. Per the `## DER Event` sequence in `ems/readme.md`:
   trigger check.
 - On trigger: identifies enrolled DER(s), computes magnitude, `POST /der-events` to
   `ems-der-control-api` — the real utility-facing IEEE 2030.5 intake this mock exercises.
-- Consumes the compliance return path (subscribes to the broker topic `ems-hmi` already consumes
-  for `der_dispatch` measurements) to know response time / measured compliance.
+- Compliance return path: not implemented. A prior version subscribed directly to the broker
+  topic `ems-hmi` also consumes for `der_dispatch` measurements — removed 2026-09-21 because a
+  utility has no business holding broker access to a site's internal telemetry; a real utility
+  only ever sees this over the 2030.5 HTTP surface, never raw pub/sub. Correct replacement (if
+  built) is an HTTP poll against der-control-api, not a broker subscribe — deliberately left open
+  rather than backfilled with the same mistake in a new shape.
 - Event-end: rating recovered (sustained, not single-sample — avoid rebound trip) OR
   `max_duration_h` hit, whichever first.
 
