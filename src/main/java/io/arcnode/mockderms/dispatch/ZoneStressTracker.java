@@ -23,7 +23,11 @@ import org.springframework.stereotype.Component;
  * #ZONE_STRESS_THRESHOLD_READINGS} consecutive fresh elevated readings before entering the stressed
  * state — same debounce shape as ems-der-control-api's {@code DeliveryShortfallMonitor} (slow to
  * enter, clears immediately on the first reading back below threshold; IHLF is itself a forecast,
- * so a drop back down is trusted right away — only the rising edge is debounced).
+ * so a drop back down is trusted right away — only the rising edge is debounced). {@code
+ * zoneStressThresholdMw} (from {@link Config}) is arbitrary, not a placeholder awaiting review — an
+ * IEEE 738 sizing attempt confirmed no physical derivation exists (the weather effect is already in
+ * the live DLR reading), and no empirical one does either until real local loading telemetry
+ * exists.
  */
 @Component
 public class ZoneStressTracker {

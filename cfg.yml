@@ -13,6 +13,11 @@ local:
   dlrDeviceId: dlr_rtu_demo
   ercotTokenUrl: https://ercotb2c.b2clogin.com/ercotb2c.onmicrosoft.com/B2C_1_PUBAPI-ROPC-FLOW/oauth2/v2.0/token
   ercotArchiveUrl: https://api.ercot.com/api/public-reports/archive/np3-562-cd
+  # Arbitrary, not "pending review" -- no physical derivation exists (IEEE 738 sizing was tried;
+  # the weather-driven delta is already in the live DLR reading, re-adding it here double-counts
+  # it) and no empirical one does either until real local loading telemetry replaces
+  # SyntheticLoadGenerator and paired zone-stress/outcome history starts accumulating. See
+  # Config's javadoc on these two fields.
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
 
@@ -31,5 +36,6 @@ beta:
   dlrDeviceId: dlr_rtu_demo
   ercotTokenUrl: https://ercotb2c.b2clogin.com/ercotb2c.onmicrosoft.com/B2C_1_PUBAPI-ROPC-FLOW/oauth2/v2.0/token
   ercotArchiveUrl: https://api.ercot.com/api/public-reports/archive/np3-562-cd
+  # Arbitrary -- see local block's comment above and Config's javadoc.
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0

@@ -9,9 +9,10 @@ import org.springframework.stereotype.Component;
  * the actual dispatch decision uses live measurements only, not yesterday's forecast.
  *
  * <p>The margin itself is not fixed — {@link ZoneStressTracker}'s debounced real-time North-zone
- * ERCOT signal tightens it when zone-wide stress is sustained, per POC-stage design (SME-reviewed
- * shape, unreviewed numbers): the local DLR trigger stays sole authority on whether to fire; the
- * zone-level signal can only make it more conservative, never independently cause a dispatch.
+ * ERCOT signal tightens it when zone-wide stress is sustained. SME-reviewed and approved: the local
+ * DLR trigger stays sole authority on whether to fire; the zone-level signal can only make it more
+ * conservative, never independently cause a dispatch. {@code zoneStressMarginBoostAmps} itself is
+ * arbitrary, not a placeholder awaiting review — see {@link io.arcnode.mockderms.Config}'s javadoc.
  */
 @Component
 public class TriggerEvaluator {

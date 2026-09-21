@@ -29,8 +29,11 @@ import org.springframework.web.client.RestClient;
  * ~5-minute refresh cadence and debounces it before it ever reaches {@link TriggerEvaluator} — this
  * class itself does no caching or debouncing. SME-reviewed and approved: the local DLR trigger
  * stays sole authority on whether to fire, this signal can only make the margin more conservative,
- * never independently cause a dispatch. The specific threshold/boost numbers are still an
- * unreviewed POC-stage placeholder (pending a causal IEEE 738 sizing pass).
+ * never independently cause a dispatch. The threshold/boost numbers themselves are arbitrary, not a
+ * placeholder awaiting review — an IEEE 738 sizing attempt confirmed no physical derivation exists
+ * (the weather effect the zone signal would correct for is already in the live DLR reading; adding
+ * it again would double-count it), and no empirical one does either until real local loading
+ * telemetry exists to accumulate paired history against.
  */
 @Component
 public class ErcotZoneLoadClient {

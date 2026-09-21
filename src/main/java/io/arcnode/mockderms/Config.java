@@ -50,11 +50,15 @@ import org.yaml.snakeyaml.Yaml;
  *     by Weather Zone) — same WireMock-testability reason as {@code ercotTokenUrl}
  * @param zoneStressThresholdMw North-zone load (MW) above which {@code ZoneStressTracker} counts a
  *     fresh reading as "elevated" — SME-approved shape (margin-tightening only, never an
- *     independent trigger), but this specific number is still a POC-stage placeholder pending a
- *     causal IEEE 738 sizing pass, not yet reviewed
+ *     independent trigger). This number itself is arbitrary: no physical derivation exists (a real
+ *     IEEE 738 sizing attempt confirmed the weather-driven delta is already baked into the live DLR
+ *     reading, so re-adding it here would double-count it) and no empirical one does either yet
+ *     (needs paired zone-stress/actual-outcome history that doesn't exist until real local loading
+ *     telemetry replaces {@code SyntheticLoadGenerator}). Not "pending review" — there is nothing
+ *     for a review to converge on until that telemetry exists.
  * @param zoneStressMarginBoostAmps amps added to {@code triggerMarginAmps} once {@code
- *     ZoneStressTracker} reports the zone as sustained-stressed — same POC-stage caveat as {@code
- *     zoneStressThresholdMw}
+ *     ZoneStressTracker} reports the zone as sustained-stressed — same arbitrary-until-real-
+ *     telemetry status as {@code zoneStressThresholdMw}, same reason
  */
 @ConfigurationProperties(prefix = "app")
 @Validated
