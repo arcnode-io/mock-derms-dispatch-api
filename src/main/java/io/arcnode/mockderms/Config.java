@@ -34,6 +34,13 @@ import org.yaml.snakeyaml.Yaml;
  *     is a secret
  * @param siteId site slug for the {@code sites/{siteId}/devices/...} topics this service consumes
  *     (dlr_rtu rating, compliance return path) — same site der_control_api dispatches to
+ * @param derControlApiUrl base URL for {@code POST /der-events} (constraint dispatch + event close)
+ * @param nominalLineVoltageKv fixed per-deployment line voltage — converts {@code
+ *     dynamic_line_rating} (amps, IEEE 738 ampacity) to a power headroom, done once here rather
+ *     than the utility's own grid infrastructure being something our topology would ever model
+ * @param triggerMarginAmps safety margin below rating before the real-time trigger check fires
+ * @param maxEventDurationHours hard cap on how long one curtailment event may stay open,
+ *     independent of whether the line rating has recovered
  */
 @ConfigurationProperties(prefix = "app")
 @Validated
@@ -44,7 +51,11 @@ public record Config(
     boolean e2e,
     @NotBlank String mqttBrokerUrl,
     @NotBlank String mqttUsername,
-    @NotBlank String siteId) {
+    @NotBlank String siteId,
+    @NotBlank String derControlApiUrl,
+    double nominalLineVoltageKv,
+    double triggerMarginAmps,
+    double maxEventDurationHours) {
 
   /** Log levels accepted in {@code cfg.yml} — mirrors the sibling templates. */
   public enum LogLevel {

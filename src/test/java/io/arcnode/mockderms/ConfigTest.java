@@ -25,6 +25,10 @@ class ConfigTest {
     assertThat(env.getProperty("app.port", Integer.class)).isEqualTo(8080);
     assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
     assertThat(env.getProperty("app.e2e", Boolean.class)).isFalse();
+    assertThat(env.getProperty("app.derControlApiUrl")).isEqualTo("http://localhost:8080");
+    assertThat(env.getProperty("app.nominalLineVoltageKv", Double.class)).isEqualTo(13.8);
+    assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
+    assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(4.0);
   }
 
   @Test
@@ -58,7 +62,18 @@ class ConfigTest {
     // Arrange
     Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     Config bad =
-        new Config(Config.LogLevel.INFO, 20, "", false, "tcp://localhost:1883", "user", "site");
+        new Config(
+            Config.LogLevel.INFO,
+            20,
+            "",
+            false,
+            "tcp://localhost:1883",
+            "user",
+            "site",
+            "http://localhost:8080",
+            13.8,
+            50.0,
+            4.0);
 
     // Act
     var violations = validator.validate(bad);
