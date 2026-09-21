@@ -20,18 +20,19 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Subscribes to {@code line_rating}'s {@code dynamic_line_rating} (amps, IEEE 738 ampacity) and
- * holds the latest reading. Canonical contract confirmed directly with embedded-engineer — {@code
- * sites/{site}/devices/line_rating/measurements/dynamic_line_rating/amps}, {@code FloatSample},
- * retained — built ahead of the real publisher landing, same as every other subscriber in this
- * system: the contract is fixed, the implementation on the other end can lag.
+ * Subscribes to a {@code dlr_rtu} instance's {@code dynamic_line_rating} (amps, IEEE 738 ampacity)
+ * and holds the latest reading. Canonical contract confirmed directly with embedded-engineer and
+ * now live on real hardware — {@code
+ * sites/{site}/devices/{device_id}/measurements/dynamic_line_rating/amps}, {@code FloatSample},
+ * retained. {@code device_id} is {@link Config#dlrDeviceId} — a per-commissioning instance
+ * identifier (e.g. their demo unit's is {@code dlr_rtu_demo}), never the template slug ({@code
+ * line_rating}) this was originally, incorrectly, assumed to be.
  */
 @Component
 public class DlrRatingSubscriber {
 
   private static final Logger LOG = LoggerFactory.getLogger(DlrRatingSubscriber.class);
-  private static final String TOPIC =
-      "sites/%s/devices/line_rating/measurements/dynamic_line_rating/amps";
+  private static final String TOPIC = "sites/%s/devices/%s/measurements/dynamic_line_rating/amps";
 
   private final MqttClient mqtt;
   private final Config config;
@@ -54,7 +55,7 @@ public class DlrRatingSubscriber {
   /** Subscribes on application startup, after {@link io.arcnode.mockderms.MqttConfig}. */
   @EventListener(ApplicationReadyEvent.class)
   public void subscribe() throws org.eclipse.paho.mqttv5.common.MqttException {
-    String topic = TOPIC.formatted(config.siteId());
+    String topic = TOPIC.formatted(config.siteId(), config.dlrDeviceId());
 
     // Reason: the single-topic MqttClient.subscribe(String, int, IMqttMessageListener) overload
     // recurses into itself and stack-overflows — a confirmed Paho 1.2.5 bug

@@ -19,15 +19,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Unit — subscribes to line_rating's dynamic_line_rating (canonical contract confirmed with
- * embedded-engineer, built ahead of the real publisher) and holds the latest amps reading. Mocked
- * broker, real JsonMapper, AAA.
+ * Unit — subscribes to a dlr_rtu instance's dynamic_line_rating (canonical contract, now live on
+ * real hardware) and holds the latest amps reading. Mocked broker, real JsonMapper, AAA.
  */
 @ExtendWith(MockitoExtension.class)
 class DlrRatingSubscriberTest {
 
   private static final String TOPIC =
-      "sites/site_001/devices/line_rating/measurements/dynamic_line_rating/amps";
+      "sites/site_001/devices/dlr_rtu_demo/measurements/dynamic_line_rating/amps";
 
   private final Config config =
       new Config(
@@ -41,7 +40,8 @@ class DlrRatingSubscriberTest {
           "http://localhost:8080",
           13.8,
           50.0,
-          4.0);
+          4.0,
+          "dlr_rtu_demo");
   private final JsonMapper mapper = JsonMapper.builder().build();
 
   @Mock private MqttClient mqtt;

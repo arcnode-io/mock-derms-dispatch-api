@@ -40,7 +40,8 @@ class EventOrchestratorTest {
           "http://localhost:8080",
           13.8,
           50.0,
-          4.0);
+          4.0,
+          "dlr_rtu_demo");
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
   @Mock private DlrRatingSubscriber ratingSubscriber;

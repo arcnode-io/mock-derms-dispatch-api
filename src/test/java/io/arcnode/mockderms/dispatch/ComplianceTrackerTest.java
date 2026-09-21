@@ -41,7 +41,8 @@ class ComplianceTrackerTest {
           "http://localhost:8080",
           13.8,
           50.0,
-          4.0);
+          4.0,
+          "dlr_rtu_demo");
   private final JsonMapper mapper = JsonMapper.builder().build();
 
   @Mock private MqttClient mqtt;

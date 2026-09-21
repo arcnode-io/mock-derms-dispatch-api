@@ -41,6 +41,9 @@ import org.yaml.snakeyaml.Yaml;
  * @param triggerMarginAmps safety margin below rating before the real-time trigger check fires
  * @param maxEventDurationHours hard cap on how long one curtailment event may stay open,
  *     independent of whether the line rating has recovered
+ * @param dlrDeviceId device_id of the {@code dlr_rtu} instance whose {@code dynamic_line_rating}
+ *     this service subscribes to — an RTU's device_id is a per-commissioning instance identifier,
+ *     never guaranteed to match its template slug, so this is config, not a compile-time constant
  */
 @ConfigurationProperties(prefix = "app")
 @Validated
@@ -55,7 +58,8 @@ public record Config(
     @NotBlank String derControlApiUrl,
     double nominalLineVoltageKv,
     double triggerMarginAmps,
-    double maxEventDurationHours) {
+    double maxEventDurationHours,
+    @NotBlank String dlrDeviceId) {
 
   /** Log levels accepted in {@code cfg.yml} — mirrors the sibling templates. */
   public enum LogLevel {

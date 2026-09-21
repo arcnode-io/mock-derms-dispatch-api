@@ -10,6 +10,7 @@ local:
   nominalLineVoltageKv: 13.8
   triggerMarginAmps: 50.0
   maxEventDurationHours: 4.0
+  dlrDeviceId: dlr_rtu_demo
 
 beta:
   logLevel: INFO
@@ -23,3 +24,4 @@ beta:
   nominalLineVoltageKv: 13.8
   triggerMarginAmps: 50.0
   maxEventDurationHours: 4.0
+  dlrDeviceId: dlr_rtu_demo

@@ -29,6 +29,7 @@ class ConfigTest {
     assertThat(env.getProperty("app.nominalLineVoltageKv", Double.class)).isEqualTo(13.8);
     assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(4.0);
+    assertThat(env.getProperty("app.dlrDeviceId")).isEqualTo("dlr_rtu_demo");
   }
 
   @Test
@@ -73,7 +74,8 @@ class ConfigTest {
             "http://localhost:8080",
             13.8,
             50.0,
-            4.0);
+            4.0,
+            "dlr_rtu_demo");
 
     // Act
     var violations = validator.validate(bad);
