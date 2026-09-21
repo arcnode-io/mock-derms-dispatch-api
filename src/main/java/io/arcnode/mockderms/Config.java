@@ -44,6 +44,16 @@ import org.yaml.snakeyaml.Yaml;
  * @param dlrDeviceId device_id of the {@code dlr_rtu} instance whose {@code dynamic_line_rating}
  *     this service subscribes to — an RTU's device_id is a per-commissioning instance identifier,
  *     never guaranteed to match its template slug, so this is config, not a compile-time constant
+ * @param ercotTokenUrl ERCOT Public API OAuth2 ROPC token endpoint — config (not a compile-time
+ *     constant) purely so tests can point it at WireMock, same reason as {@code derControlApiUrl}
+ * @param ercotArchiveUrl ERCOT Public API archive endpoint for NP3-562-CD (Intra-Hour Load Forecast
+ *     by Weather Zone) — same WireMock-testability reason as {@code ercotTokenUrl}
+ * @param zoneStressThresholdMw North-zone load (MW, from {@code ErcotZoneLoadClient}) above which
+ *     the real-time trigger's margin gets more conservative — POC-stage placeholder, not yet
+ *     reviewed by system-architect/SME
+ * @param zoneStressMarginBoostAmps amps added to {@code triggerMarginAmps} once {@code
+ *     zoneStressThresholdMw} is exceeded — the zone-level signal only ever tightens the local
+ *     trigger's margin, it can never independently cause a dispatch
  */
 @ConfigurationProperties(prefix = "app")
 @Validated
@@ -59,7 +69,11 @@ public record Config(
     double nominalLineVoltageKv,
     double triggerMarginAmps,
     double maxEventDurationHours,
-    @NotBlank String dlrDeviceId) {
+    @NotBlank String dlrDeviceId,
+    @NotBlank String ercotTokenUrl,
+    @NotBlank String ercotArchiveUrl,
+    double zoneStressThresholdMw,
+    double zoneStressMarginBoostAmps) {
 
   /** Log levels accepted in {@code cfg.yml} — mirrors the sibling templates. */
   public enum LogLevel {

@@ -27,6 +27,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class EventOrchestratorTest {
 
   private static final Instant NOW = Instant.parse("2026-09-21T12:00:00Z");
+  // Reason: TriggerEvaluator is mocked here, so its zone-stress margin logic isn't under test —
+  // only that EventOrchestrator passes the zone-load reading through. Value itself is arbitrary.
+  private static final double ZONE_LOAD_MW = 1500.0;
 
   private final Config config =
       new Config(
@@ -41,17 +44,22 @@ class EventOrchestratorTest {
           13.8,
           50.0,
           4.0,
-          "dlr_rtu_demo");
+          "dlr_rtu_demo",
+          "https://example.invalid/token",
+          "https://example.invalid/archive",
+          1800.0,
+          25.0);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
   @Mock private DlrRatingSubscriber ratingSubscriber;
   @Mock private SyntheticLoadGenerator loadGenerator;
   @Mock private TriggerEvaluator triggerEvaluator;
+  @Mock private ErcotZoneLoadClient zoneLoadClient;
   @Mock private DerEventsClient client;
 
   private EventOrchestrator orchestrator() {
     return new EventOrchestrator(
-        ratingSubscriber, loadGenerator, triggerEvaluator, client, config, clock);
+        ratingSubscriber, loadGenerator, triggerEvaluator, zoneLoadClient, client, config, clock);
   }
 
   @Test
@@ -71,7 +79,8 @@ class EventOrchestratorTest {
     // Arrange
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadGenerator.currentLoadingAmps()).willReturn(400.0);
-    given(triggerEvaluator.shouldTrigger(600.0, 400.0)).willReturn(false);
+    given(zoneLoadClient.currentNorthZoneLoadMw()).willReturn(ZONE_LOAD_MW);
+    given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_LOAD_MW)).willReturn(false);
 
     // Act
     orchestrator().tick();
@@ -82,11 +91,13 @@ class EventOrchestratorTest {
 
   @Test
   void dispatchesWithPositiveTargetActivePowerWhenTriggering() {
-    // Arrange: rating 600A, margin 50A, loading 560A -> 10A over threshold
+    // Arrange: rating 600A, effective margin 50A, loading 560A -> 10A over threshold
     // 10A * 13.8kV * 1000 = 138,000W
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadGenerator.currentLoadingAmps()).willReturn(560.0);
-    given(triggerEvaluator.shouldTrigger(600.0, 560.0)).willReturn(true);
+    given(zoneLoadClient.currentNorthZoneLoadMw()).willReturn(ZONE_LOAD_MW);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_LOAD_MW)).willReturn(true);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_LOAD_MW)).willReturn(50.0);
 
     // Act
     orchestrator().tick();
@@ -104,7 +115,9 @@ class EventOrchestratorTest {
     // Arrange
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadGenerator.currentLoadingAmps()).willReturn(560.0);
-    given(triggerEvaluator.shouldTrigger(600.0, 560.0)).willReturn(true);
+    given(zoneLoadClient.currentNorthZoneLoadMw()).willReturn(ZONE_LOAD_MW);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_LOAD_MW)).willReturn(true);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_LOAD_MW)).willReturn(50.0);
     EventOrchestrator orchestrator = orchestrator();
 
     // Act
@@ -121,8 +134,10 @@ class EventOrchestratorTest {
     // Arrange: trigger, then recover
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadGenerator.currentLoadingAmps()).willReturn(560.0, 400.0, 400.0, 400.0);
-    given(triggerEvaluator.shouldTrigger(600.0, 560.0)).willReturn(true);
-    given(triggerEvaluator.shouldTrigger(600.0, 400.0)).willReturn(false);
+    given(zoneLoadClient.currentNorthZoneLoadMw()).willReturn(ZONE_LOAD_MW);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_LOAD_MW)).willReturn(true);
+    given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_LOAD_MW)).willReturn(false);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_LOAD_MW)).willReturn(50.0);
     EventOrchestrator orchestrator = orchestrator();
     orchestrator.tick(); // dispatches
 
@@ -147,8 +162,10 @@ class EventOrchestratorTest {
     // Arrange: trigger, one recovered sample (not sustained), back to triggering — must not close
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadGenerator.currentLoadingAmps()).willReturn(560.0, 400.0, 560.0, 400.0, 400.0, 400.0);
-    given(triggerEvaluator.shouldTrigger(600.0, 560.0)).willReturn(true);
-    given(triggerEvaluator.shouldTrigger(600.0, 400.0)).willReturn(false);
+    given(zoneLoadClient.currentNorthZoneLoadMw()).willReturn(ZONE_LOAD_MW);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_LOAD_MW)).willReturn(true);
+    given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_LOAD_MW)).willReturn(false);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_LOAD_MW)).willReturn(50.0);
     EventOrchestrator orchestrator = orchestrator();
 
     // Act: dispatch, one recovery tick, back to triggering (should reset the recovery counter),
@@ -199,11 +216,19 @@ class EventOrchestratorTest {
     // maxEventDurationHours (4h)
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadGenerator.currentLoadingAmps()).willReturn(560.0);
-    given(triggerEvaluator.shouldTrigger(600.0, 560.0)).willReturn(true);
+    given(zoneLoadClient.currentNorthZoneLoadMw()).willReturn(ZONE_LOAD_MW);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_LOAD_MW)).willReturn(true);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_LOAD_MW)).willReturn(50.0);
     MutableClock clock = new MutableClock(NOW);
     EventOrchestrator orchestrator =
         new EventOrchestrator(
-            ratingSubscriber, loadGenerator, triggerEvaluator, client, config, clock);
+            ratingSubscriber,
+            loadGenerator,
+            triggerEvaluator,
+            zoneLoadClient,
+            client,
+            config,
+            clock);
 
     // Act
     orchestrator.tick(); // dispatch

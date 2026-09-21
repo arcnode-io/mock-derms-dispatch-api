@@ -11,6 +11,10 @@ local:
   triggerMarginAmps: 50.0
   maxEventDurationHours: 4.0
   dlrDeviceId: dlr_rtu_demo
+  ercotTokenUrl: https://ercotb2c.b2clogin.com/ercotb2c.onmicrosoft.com/B2C_1_PUBAPI-ROPC-FLOW/oauth2/v2.0/token
+  ercotArchiveUrl: https://api.ercot.com/api/public-reports/archive/np3-562-cd
+  zoneStressThresholdMw: 1800.0
+  zoneStressMarginBoostAmps: 25.0
 
 beta:
   logLevel: INFO
@@ -25,3 +29,7 @@ beta:
   triggerMarginAmps: 50.0
   maxEventDurationHours: 4.0
   dlrDeviceId: dlr_rtu_demo
+  ercotTokenUrl: https://ercotb2c.b2clogin.com/ercotb2c.onmicrosoft.com/B2C_1_PUBAPI-ROPC-FLOW/oauth2/v2.0/token
+  ercotArchiveUrl: https://api.ercot.com/api/public-reports/archive/np3-562-cd
+  zoneStressThresholdMw: 1800.0
+  zoneStressMarginBoostAmps: 25.0

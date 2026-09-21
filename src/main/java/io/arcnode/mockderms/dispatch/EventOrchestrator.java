@@ -33,6 +33,7 @@ public class EventOrchestrator {
   private final DlrRatingSubscriber ratingSubscriber;
   private final SyntheticLoadGenerator loadGenerator;
   private final TriggerEvaluator triggerEvaluator;
+  private final ErcotZoneLoadClient zoneLoadClient;
   private final DerEventsClient client;
   private final Config config;
   private final Clock clock;
@@ -47,12 +48,14 @@ public class EventOrchestrator {
       DlrRatingSubscriber ratingSubscriber,
       SyntheticLoadGenerator loadGenerator,
       TriggerEvaluator triggerEvaluator,
+      ErcotZoneLoadClient zoneLoadClient,
       DerEventsClient client,
       Config config,
       Clock clock) {
     this.ratingSubscriber = ratingSubscriber;
     this.loadGenerator = loadGenerator;
     this.triggerEvaluator = triggerEvaluator;
+    this.zoneLoadClient = zoneLoadClient;
     this.client = client;
     this.config = config;
     this.clock = clock;
@@ -65,20 +68,22 @@ public class EventOrchestrator {
       return;
     }
     double loadingAmps = loadGenerator.currentLoadingAmps();
-    boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps);
+    double zoneLoadMw = zoneLoadClient.currentNorthZoneLoadMw();
+    boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneLoadMw);
 
     ActiveEvent current = activeEvent.get();
     if (current == null) {
       if (triggering) {
-        dispatch(ratingAmps, loadingAmps);
+        dispatch(ratingAmps, loadingAmps, zoneLoadMw);
       }
     } else {
       reassess(current, triggering);
     }
   }
 
-  private void dispatch(double ratingAmps, double loadingAmps) {
-    double excessAmps = loadingAmps - (ratingAmps - config.triggerMarginAmps());
+  private void dispatch(double ratingAmps, double loadingAmps, double zoneLoadMw) {
+    double excessAmps =
+        loadingAmps - (ratingAmps - triggerEvaluator.effectiveMarginAmps(zoneLoadMw));
     double targetWatts = excessAmps * config.nominalLineVoltageKv() * WATTS_PER_KV_AMP;
     String mrid = UUID.randomUUID().toString();
     Instant now = clock.instant();

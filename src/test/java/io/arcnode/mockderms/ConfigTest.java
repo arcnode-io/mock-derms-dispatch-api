@@ -30,6 +30,14 @@ class ConfigTest {
     assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(4.0);
     assertThat(env.getProperty("app.dlrDeviceId")).isEqualTo("dlr_rtu_demo");
+    assertThat(env.getProperty("app.ercotTokenUrl"))
+        .isEqualTo(
+            "https://ercotb2c.b2clogin.com/ercotb2c.onmicrosoft.com/B2C_1_PUBAPI-ROPC-FLOW"
+                + "/oauth2/v2.0/token");
+    assertThat(env.getProperty("app.ercotArchiveUrl"))
+        .isEqualTo("https://api.ercot.com/api/public-reports/archive/np3-562-cd");
+    assertThat(env.getProperty("app.zoneStressThresholdMw", Double.class)).isEqualTo(1800.0);
+    assertThat(env.getProperty("app.zoneStressMarginBoostAmps", Double.class)).isEqualTo(25.0);
   }
 
   @Test
@@ -75,7 +83,11 @@ class ConfigTest {
             13.8,
             50.0,
             4.0,
-            "dlr_rtu_demo");
+            "dlr_rtu_demo",
+            "https://example.invalid/token",
+            "https://example.invalid/archive",
+            1800.0,
+            25.0);
 
     // Act
     var violations = validator.validate(bad);

@@ -42,7 +42,11 @@ class ComplianceTrackerTest {
           13.8,
           50.0,
           4.0,
-          "dlr_rtu_demo");
+          "dlr_rtu_demo",
+          "https://example.invalid/token",
+          "https://example.invalid/archive",
+          1800.0,
+          25.0);
   private final JsonMapper mapper = JsonMapper.builder().build();
 
   @Mock private MqttClient mqtt;
