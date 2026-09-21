@@ -25,10 +25,12 @@ import org.springframework.web.client.RestClient;
  * resilience shape as ems-analyst-agent's own gridstatus.io integration (markets.py), so a demo or
  * CI run without live ERCOT credentials degrades gracefully instead of failing.
  *
- * <p>POC-stage: feeds {@link TriggerEvaluator}'s dynamic margin only. The local DLR trigger stays
- * the sole authority on whether to fire — this signal can only make the margin more conservative,
- * never independently cause a dispatch. Pending final design review (routed to system-architect/
- * SME, not yet resolved as of this build).
+ * <p>Called directly only by {@link ZoneStressTracker}, which caches this raw reading to IHLF's own
+ * ~5-minute refresh cadence and debounces it before it ever reaches {@link TriggerEvaluator} — this
+ * class itself does no caching or debouncing. SME-reviewed and approved: the local DLR trigger
+ * stays sole authority on whether to fire, this signal can only make the margin more conservative,
+ * never independently cause a dispatch. The specific threshold/boost numbers are still an
+ * unreviewed POC-stage placeholder (pending a causal IEEE 738 sizing pass).
  */
 @Component
 public class ErcotZoneLoadClient {

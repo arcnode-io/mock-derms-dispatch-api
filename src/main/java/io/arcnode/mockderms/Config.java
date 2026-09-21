@@ -48,12 +48,13 @@ import org.yaml.snakeyaml.Yaml;
  *     constant) purely so tests can point it at WireMock, same reason as {@code derControlApiUrl}
  * @param ercotArchiveUrl ERCOT Public API archive endpoint for NP3-562-CD (Intra-Hour Load Forecast
  *     by Weather Zone) — same WireMock-testability reason as {@code ercotTokenUrl}
- * @param zoneStressThresholdMw North-zone load (MW, from {@code ErcotZoneLoadClient}) above which
- *     the real-time trigger's margin gets more conservative — POC-stage placeholder, not yet
- *     reviewed by system-architect/SME
+ * @param zoneStressThresholdMw North-zone load (MW) above which {@code ZoneStressTracker} counts a
+ *     fresh reading as "elevated" — SME-approved shape (margin-tightening only, never an
+ *     independent trigger), but this specific number is still a POC-stage placeholder pending a
+ *     causal IEEE 738 sizing pass, not yet reviewed
  * @param zoneStressMarginBoostAmps amps added to {@code triggerMarginAmps} once {@code
- *     zoneStressThresholdMw} is exceeded — the zone-level signal only ever tightens the local
- *     trigger's margin, it can never independently cause a dispatch
+ *     ZoneStressTracker} reports the zone as sustained-stressed — same POC-stage caveat as {@code
+ *     zoneStressThresholdMw}
  */
 @ConfigurationProperties(prefix = "app")
 @Validated

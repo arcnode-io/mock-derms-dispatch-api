@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
  * rating? Both amps — the headroom curve/day-ahead forecast is a separate, planning-facing concern;
  * the actual dispatch decision uses live measurements only, not yesterday's forecast.
  *
- * <p>The margin itself is not fixed — real-time North-zone ERCOT load ({@link ErcotZoneLoadClient})
- * tightens it when zone-wide stress is elevated, per POC-stage design (pending system-architect/SME
- * review): the local DLR trigger stays sole authority on whether to fire; the zone-level signal can
- * only make it more conservative, never independently cause a dispatch.
+ * <p>The margin itself is not fixed — {@link ZoneStressTracker}'s debounced real-time North-zone
+ * ERCOT signal tightens it when zone-wide stress is sustained, per POC-stage design (SME-reviewed
+ * shape, unreviewed numbers): the local DLR trigger stays sole authority on whether to fire; the
+ * zone-level signal can only make it more conservative, never independently cause a dispatch.
  */
 @Component
 public class TriggerEvaluator {
@@ -25,17 +25,17 @@ public class TriggerEvaluator {
   /**
    * @param ratingAmps current live rating (dynamic_line_rating)
    * @param loadingAmps current live loading
-   * @param zoneLoadMw current North-zone load, MW ({@link ErcotZoneLoadClient})
+   * @param zoneStressed debounced North-zone stress signal ({@link ZoneStressTracker})
    * @return true once loading has eaten into the effective margin, not merely reached it
    */
-  public boolean shouldTrigger(double ratingAmps, double loadingAmps, double zoneLoadMw) {
-    return loadingAmps > ratingAmps - effectiveMarginAmps(zoneLoadMw);
+  public boolean shouldTrigger(double ratingAmps, double loadingAmps, boolean zoneStressed) {
+    return loadingAmps > ratingAmps - effectiveMarginAmps(zoneStressed);
   }
 
-  /** The margin actually in effect for the given zone-load reading — see class Javadoc. */
-  public double effectiveMarginAmps(double zoneLoadMw) {
+  /** The margin actually in effect given the current zone-stress signal — see class Javadoc. */
+  public double effectiveMarginAmps(boolean zoneStressed) {
     double margin = config.triggerMarginAmps();
-    if (zoneLoadMw > config.zoneStressThresholdMw()) {
+    if (zoneStressed) {
       margin += config.zoneStressMarginBoostAmps();
     }
     return margin;

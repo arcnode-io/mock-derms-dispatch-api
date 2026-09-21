@@ -33,7 +33,7 @@ public class EventOrchestrator {
   private final DlrRatingSubscriber ratingSubscriber;
   private final SyntheticLoadGenerator loadGenerator;
   private final TriggerEvaluator triggerEvaluator;
-  private final ErcotZoneLoadClient zoneLoadClient;
+  private final ZoneStressTracker zoneStressTracker;
   private final DerEventsClient client;
   private final Config config;
   private final Clock clock;
@@ -48,14 +48,14 @@ public class EventOrchestrator {
       DlrRatingSubscriber ratingSubscriber,
       SyntheticLoadGenerator loadGenerator,
       TriggerEvaluator triggerEvaluator,
-      ErcotZoneLoadClient zoneLoadClient,
+      ZoneStressTracker zoneStressTracker,
       DerEventsClient client,
       Config config,
       Clock clock) {
     this.ratingSubscriber = ratingSubscriber;
     this.loadGenerator = loadGenerator;
     this.triggerEvaluator = triggerEvaluator;
-    this.zoneLoadClient = zoneLoadClient;
+    this.zoneStressTracker = zoneStressTracker;
     this.client = client;
     this.config = config;
     this.clock = clock;
@@ -68,22 +68,22 @@ public class EventOrchestrator {
       return;
     }
     double loadingAmps = loadGenerator.currentLoadingAmps();
-    double zoneLoadMw = zoneLoadClient.currentNorthZoneLoadMw();
-    boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneLoadMw);
+    boolean zoneStressed = zoneStressTracker.isZoneStressed();
+    boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneStressed);
 
     ActiveEvent current = activeEvent.get();
     if (current == null) {
       if (triggering) {
-        dispatch(ratingAmps, loadingAmps, zoneLoadMw);
+        dispatch(ratingAmps, loadingAmps, zoneStressed);
       }
     } else {
       reassess(current, triggering);
     }
   }
 
-  private void dispatch(double ratingAmps, double loadingAmps, double zoneLoadMw) {
+  private void dispatch(double ratingAmps, double loadingAmps, boolean zoneStressed) {
     double excessAmps =
-        loadingAmps - (ratingAmps - triggerEvaluator.effectiveMarginAmps(zoneLoadMw));
+        loadingAmps - (ratingAmps - triggerEvaluator.effectiveMarginAmps(zoneStressed));
     double targetWatts = excessAmps * config.nominalLineVoltageKv() * WATTS_PER_KV_AMP;
     String mrid = UUID.randomUUID().toString();
     Instant now = clock.instant();
