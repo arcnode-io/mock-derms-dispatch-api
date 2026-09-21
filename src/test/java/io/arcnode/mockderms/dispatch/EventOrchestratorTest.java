@@ -52,7 +52,7 @@ class EventOrchestratorTest {
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
   @Mock private DlrRatingSubscriber ratingSubscriber;
-  @Mock private SyntheticLoadGenerator loadGenerator;
+  @Mock private LiveLoadingSubscriber loadingSubscriber;
   @Mock private TriggerEvaluator triggerEvaluator;
   @Mock private ZoneStressTracker zoneStressTracker;
   @Mock private DerEventsClient client;
@@ -60,7 +60,7 @@ class EventOrchestratorTest {
   private EventOrchestrator orchestrator() {
     return new EventOrchestrator(
         ratingSubscriber,
-        loadGenerator,
+        loadingSubscriber,
         triggerEvaluator,
         zoneStressTracker,
         client,
@@ -81,10 +81,23 @@ class EventOrchestratorTest {
   }
 
   @Test
+  void doesNothingWhenNoLoadingHasArrivedYet() {
+    // Arrange
+    given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(null);
+
+    // Act
+    orchestrator().tick();
+
+    // Assert
+    verify(client, never()).dispatch(any());
+  }
+
+  @Test
   void doesNothingWhenNotTriggering() {
     // Arrange
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(400.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(400.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_STRESSED)).willReturn(false);
 
@@ -100,7 +113,7 @@ class EventOrchestratorTest {
     // Arrange: rating 600A, effective margin 50A, loading 560A -> 10A over threshold
     // 10A * 13.8kV * 1000 = 138,000W
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(560.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
     given(triggerEvaluator.effectiveMarginAmps(ZONE_STRESSED)).willReturn(50.0);
@@ -126,7 +139,7 @@ class EventOrchestratorTest {
   void currentTargetWattsReflectsTheActiveEventAfterDispatchAndClearsAfterClose() {
     // Arrange: same fixture as dispatchesWithPositiveTargetActivePowerWhenTriggering, then recovers
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(560.0, 400.0, 400.0, 400.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0, 400.0, 400.0, 400.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
     given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_STRESSED)).willReturn(false);
@@ -148,7 +161,7 @@ class EventOrchestratorTest {
   void doesNotRedispatchOnEveryTickWhileAlreadyActive() {
     // Arrange
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(560.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
     given(triggerEvaluator.effectiveMarginAmps(ZONE_STRESSED)).willReturn(50.0);
@@ -167,7 +180,7 @@ class EventOrchestratorTest {
   void closesAfterSustainedRecoveryNotOnASingleSample() {
     // Arrange: trigger, then recover
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(560.0, 400.0, 400.0, 400.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0, 400.0, 400.0, 400.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
     given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_STRESSED)).willReturn(false);
@@ -195,7 +208,8 @@ class EventOrchestratorTest {
   void aSingleRecoveredSampleDoesNotResetAfterGoingBackToTriggering() {
     // Arrange: trigger, one recovered sample (not sustained), back to triggering — must not close
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(560.0, 400.0, 560.0, 400.0, 400.0, 400.0);
+    given(loadingSubscriber.currentLoadingAmps())
+        .willReturn(560.0, 400.0, 560.0, 400.0, 400.0, 400.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
     given(triggerEvaluator.shouldTrigger(600.0, 400.0, ZONE_STRESSED)).willReturn(false);
@@ -249,7 +263,7 @@ class EventOrchestratorTest {
     // Arrange: still over the margin the whole time, but the event has been open past
     // maxEventDurationHours (4h)
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
-    given(loadGenerator.currentLoadingAmps()).willReturn(560.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
     given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
     given(triggerEvaluator.effectiveMarginAmps(ZONE_STRESSED)).willReturn(50.0);
@@ -257,7 +271,7 @@ class EventOrchestratorTest {
     EventOrchestrator orchestrator =
         new EventOrchestrator(
             ratingSubscriber,
-            loadGenerator,
+            loadingSubscriber,
             triggerEvaluator,
             zoneStressTracker,
             client,

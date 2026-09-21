@@ -53,9 +53,10 @@ import org.yaml.snakeyaml.Yaml;
  *     independent trigger). This number itself is arbitrary: no physical derivation exists (a real
  *     IEEE 738 sizing attempt confirmed the weather-driven delta is already baked into the live DLR
  *     reading, so re-adding it here would double-count it) and no empirical one does either yet
- *     (needs paired zone-stress/actual-outcome history that doesn't exist until real local loading
- *     telemetry replaces {@code SyntheticLoadGenerator}). Not "pending review" — there is nothing
- *     for a review to converge on until that telemetry exists.
+ *     (needs paired zone-stress/actual-outcome history that doesn't exist yet — {@link
+ *     io.arcnode.mockderms.dispatch.LiveLoadingSubscriber} now carries a real device topic, but its
+ *     value is still synthetic until the PZEM-004T hardware lands). Not "pending review" — there is
+ *     nothing for a review to converge on until that history exists.
  * @param zoneStressMarginBoostAmps amps added to {@code triggerMarginAmps} once {@code
  *     ZoneStressTracker} reports the zone as sustained-stressed — same arbitrary-until-real-
  *     telemetry status as {@code zoneStressThresholdMw}, same reason

@@ -31,7 +31,7 @@ public class EventOrchestrator {
   private static final int RECOVERY_THRESHOLD_TICKS = 3;
 
   private final DlrRatingSubscriber ratingSubscriber;
-  private final SyntheticLoadGenerator loadGenerator;
+  private final LiveLoadingSubscriber loadingSubscriber;
   private final TriggerEvaluator triggerEvaluator;
   private final ZoneStressTracker zoneStressTracker;
   private final DerEventsClient client;
@@ -46,14 +46,14 @@ public class EventOrchestrator {
 
   public EventOrchestrator(
       DlrRatingSubscriber ratingSubscriber,
-      SyntheticLoadGenerator loadGenerator,
+      LiveLoadingSubscriber loadingSubscriber,
       TriggerEvaluator triggerEvaluator,
       ZoneStressTracker zoneStressTracker,
       DerEventsClient client,
       Config config,
       Clock clock) {
     this.ratingSubscriber = ratingSubscriber;
-    this.loadGenerator = loadGenerator;
+    this.loadingSubscriber = loadingSubscriber;
     this.triggerEvaluator = triggerEvaluator;
     this.zoneStressTracker = zoneStressTracker;
     this.client = client;
@@ -75,10 +75,11 @@ public class EventOrchestrator {
   @Scheduled(fixedDelay = 5000)
   public void tick() {
     Double ratingAmps = ratingSubscriber.currentRatingAmps();
-    if (ratingAmps == null) {
+    Double loadingAmpsBoxed = loadingSubscriber.currentLoadingAmps();
+    if (ratingAmps == null || loadingAmpsBoxed == null) {
       return;
     }
-    double loadingAmps = loadGenerator.currentLoadingAmps();
+    double loadingAmps = loadingAmpsBoxed;
     boolean zoneStressed = zoneStressTracker.isZoneStressed();
     boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneStressed);
 
