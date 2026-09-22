@@ -79,6 +79,11 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
     wiremock.stubFor(
         get(urlPathEqualTo("/archive/np3-562-cd"))
             .withQueryParam("size", equalTo("1"))
+            // Reason: real bug this caught retroactively — TokenResponse.idToken never matched
+            // the real API's snake_case id_token field, so every archive call silently sent
+            // "Bearer null" and this test still passed, because without this header assertion
+            // WireMock matches the stub regardless of what Authorization value arrives.
+            .withHeader("Authorization", equalTo("Bearer fake-token"))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -87,6 +92,7 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
     wiremock.stubFor(
         get(urlPathEqualTo("/archive/np3-562-cd"))
             .withQueryParam("download", equalTo("42"))
+            .withHeader("Authorization", equalTo("Bearer fake-token"))
             .willReturn(
                 aResponse()
                     .withStatus(200)

@@ -1,5 +1,6 @@
 package io.arcnode.mockderms.dispatch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.arcnode.mockderms.Config;
 import java.time.Clock;
 import java.time.Instant;
@@ -86,5 +87,9 @@ public class ErcotTokenClient {
     return response.idToken();
   }
 
-  private record TokenResponse(String idToken) {}
+  // Reason: real ERCOT response field is snake_case id_token — no global Jackson naming strategy
+  // configured, so without this the field silently deserialized to null (confirmed via a real
+  // isolated probe against the live endpoint with real credentials: auth succeeds, real token
+  // comes back under "id_token", but idToken never matched it).
+  private record TokenResponse(@JsonProperty("id_token") String idToken) {}
 }
