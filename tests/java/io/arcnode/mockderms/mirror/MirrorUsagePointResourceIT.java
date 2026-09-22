@@ -19,7 +19,7 @@ class MirrorUsagePointResourceIT extends AbstractBrokerIT {
   private static final String REAL_SHAPE_XML =
       """
       <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-      <MirrorUsagePoint xmlns="http://ieee.org/2030.5">
+      <MirrorUsagePoint xmlns="urn:ieee:std:2030.5:ns" schemaVer="2.2">
           <mRID>00112233445566778899001122334455</mRID>
           <deviceLFDI>0011223344556677889900112233445566778899</deviceLFDI>
           <roleFlags>0009</roleFlags>

@@ -136,10 +136,13 @@
 
   <build>
     <plugins>
-      <!-- Compiles src/main/resources/xsd/sep.xsd (the real IEEE 2030.5 schema, own copy, no
+      <!-- Compiles src/main/resources/xsd/sep.xsd (IEEE 2030.5-2023's own schema, own copy, no
            shared library across repos) into real JAXB classes at generate-sources. Producing
            schema-invalid XML becomes structurally impossible rather than something to get right
-           by eye. -->
+           by eye. sep-bindings.xjb resolves ObjectFactory collisions between each resource's named
+           complexType and its root element declaration (e.g. MirrorUsagePoint the type vs. the
+           schemaVer-carrying MirrorUsagePoint root element) by giving the root element its own
+           MirrorUsagePointElement class/factory method. -->
       <plugin>
         <groupId>org.jvnet.jaxb</groupId>
         <artifactId>jaxb-maven-plugin</artifactId>
@@ -156,6 +159,9 @@
               </schemaIncludes>
               <generatePackage>io.arcnode.mockderms.mirror.ieee20305</generatePackage>
               <generateDirectory>${project.build.directory}/generated-sources/jaxb</generateDirectory>
+              <bindingIncludes>
+                <bindingInclude>sep-bindings.xjb</bindingInclude>
+              </bindingIncludes>
             </configuration>
           </execution>
         </executions>

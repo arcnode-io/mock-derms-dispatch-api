@@ -1,9 +1,10 @@
 package io.arcnode.mockderms.mirror;
 
 import io.arcnode.mockderms.mirror.ieee20305.MirrorUsagePoint;
+import io.arcnode.mockderms.mirror.ieee20305.MirrorUsagePointElement;
 import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.JAXBElement;
 import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import javax.xml.transform.stream.StreamSource;
 
@@ -20,15 +21,10 @@ public final class Ieee20305Xml {
 
   public static MirrorUsagePoint unmarshal(String xml) {
     try {
-      JAXBContext context = JAXBContext.newInstance(MirrorUsagePoint.class);
-      // Reason: MirrorUsagePoint has no @XmlRootElement of its own (root association comes from
-      // ObjectFactory.createMirrorUsagePoint on the sending side) — the declaredType overload
-      // tells the unmarshaller what to bind the root element to instead of guessing.
-      JAXBElement<MirrorUsagePoint> element =
-          context
-              .createUnmarshaller()
-              .unmarshal(new StreamSource(new StringReader(xml)), MirrorUsagePoint.class);
-      return element.getValue();
+      JAXBContext context = JAXBContext.newInstance(MirrorUsagePointElement.class);
+      Unmarshaller unmarshaller = context.createUnmarshaller();
+      return (MirrorUsagePointElement)
+          unmarshaller.unmarshal(new StreamSource(new StringReader(xml)));
     } catch (JAXBException e) {
       throw new IllegalArgumentException("failed to parse MirrorUsagePoint", e);
     }
