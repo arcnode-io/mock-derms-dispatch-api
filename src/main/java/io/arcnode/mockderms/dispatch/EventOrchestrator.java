@@ -116,7 +116,7 @@ public class EventOrchestrator {
 
   private void reassess(ActiveEvent current, boolean triggering) {
     if (maxDurationExceeded(current.dispatchedAt(), clock.instant())) {
-      close(current);
+      close(current, "COMPLETED");
       return;
     }
     if (triggering) {
@@ -124,7 +124,7 @@ public class EventOrchestrator {
       return;
     }
     if (consecutiveRecoveryTicks.incrementAndGet() >= RECOVERY_THRESHOLD_TICKS) {
-      close(current);
+      close(current, "CANCELLED");
     }
   }
 
@@ -134,14 +134,16 @@ public class EventOrchestrator {
     return Duration.between(dispatchedAt, now).toSeconds() >= maxSeconds;
   }
 
-  private void close(ActiveEvent current) {
+  private void close(ActiveEvent current, String eventStatus) {
     // Reason: der-control-api has no literal "event_active=false" field — event_active is
-    // derived, not settable. Closing for real means re-sending the same mrid with
-    // eventStatus=CANCELLED, matching der-control-api's own retransmission-update behavior.
+    // derived, not settable. Closing for real means re-sending the same mrid with a terminal
+    // eventStatus, matching der-control-api's own retransmission-update behavior. COMPLETED (ran
+    // its max Effective Scheduled Period) vs CANCELLED (cut short by sustained recovery) per IEEE
+    // 2030.5-2023's own EventStatus.currentStatus distinction — not interchangeable labels.
     client.dispatch(
         new DerEventRequest(
             current.mrid(),
-            "CANCELLED",
+            eventStatus,
             current.interval(),
             new DerEventRequest.ControlBase(null, null, null, null)));
     activeEvent.set(null);

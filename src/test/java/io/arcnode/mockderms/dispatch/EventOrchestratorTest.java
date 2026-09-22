@@ -259,9 +259,9 @@ class EventOrchestratorTest {
   }
 
   @Test
-  void closesOnMaxDurationEvenWhileStillTriggering() {
+  void closesWithCompletedOnMaxDurationEvenWhileStillTriggering() {
     // Arrange: still over the margin the whole time, but the event has been open past
-    // maxEventDurationHours (4h)
+    // maxEventDurationHours (4h) — a natural duration expiry, not a cancellation
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
@@ -286,6 +286,6 @@ class EventOrchestratorTest {
     // Assert
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
     verify(client, times(2)).dispatch(request.capture());
-    assertThat(request.getAllValues().get(1).eventStatus()).isEqualTo("CANCELLED");
+    assertThat(request.getAllValues().get(1).eventStatus()).isEqualTo("COMPLETED");
   }
 }
