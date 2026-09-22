@@ -1,5 +1,5 @@
 local:
-  logLevel: DEBUG
+  logLevel: INFO
   port: 8080
   host: 127.0.0.1
   e2e: false
@@ -15,9 +15,8 @@ local:
   ercotArchiveUrl: https://api.ercot.com/api/public-reports/archive/np3-562-cd
   # Arbitrary, not "pending review" -- no physical derivation exists (IEEE 738 sizing was tried;
   # the weather-driven delta is already in the live DLR reading, re-adding it here double-counts
-  # it) and no empirical one does either until real local loading telemetry replaces
-  # SyntheticLoadGenerator and paired zone-stress/outcome history starts accumulating. See
-  # Config's javadoc on these two fields.
+  # it) and no empirical one does either until paired zone-stress/outcome history starts
+  # accumulating against LiveLoadingSubscriber's real telemetry. See Config's javadoc.
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
 

@@ -82,6 +82,21 @@ public class EventOrchestrator {
     double loadingAmps = loadingAmpsBoxed;
     boolean zoneStressed = zoneStressTracker.isZoneStressed();
     boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneStressed);
+    if (LOG.isInfoEnabled()) {
+      double effectiveMargin = triggerEvaluator.effectiveMarginAmps(zoneStressed);
+      String marginBreakdown =
+          zoneStressed
+              ? "%sA local + %sA ERCOT zone-stress boost"
+                  .formatted(config.triggerMarginAmps(), config.zoneStressMarginBoostAmps())
+              : "local only, ERCOT zone not stressed";
+      LOG.info(
+          "📊 Evaluated: loading={}A vs rating={}A, margin={}A ({}) → {}",
+          loadingAmps,
+          ratingAmps,
+          effectiveMargin,
+          marginBreakdown,
+          triggering ? "THRESHOLD TRIPPED" : "within margin");
+    }
 
     ActiveEvent current = activeEvent.get();
     if (current == null) {
@@ -102,6 +117,9 @@ public class EventOrchestrator {
     long durationSeconds = (long) (config.maxEventDurationHours() * 3600);
     DerEventRequest.Interval interval = new DerEventRequest.Interval(now, durationSeconds);
 
+    if (LOG.isInfoEnabled()) {
+      LOG.info("⚡ Sending event based on real-time analysis: target={}W", targetWatts);
+    }
     client.dispatch(
         new DerEventRequest(
             mrid,

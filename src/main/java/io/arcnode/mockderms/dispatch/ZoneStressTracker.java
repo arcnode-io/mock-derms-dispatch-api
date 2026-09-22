@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,6 +33,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ZoneStressTracker {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ZoneStressTracker.class);
 
   // Reason: matches IHLF's own real refresh cadence (confirmed live: 5-minute-updated documents)
   // — this isn't a performance shortcut, it's simply not polling faster than the data can change.
@@ -73,12 +77,25 @@ public class ZoneStressTracker {
 
   private void recordReading(double value) {
     if (value > zoneStressThresholdMw) {
-      if (consecutiveElevatedReadings.incrementAndGet() >= ZONE_STRESS_THRESHOLD_READINGS) {
-        zoneStressed.set(true);
+      boolean nowStressed =
+          consecutiveElevatedReadings.incrementAndGet() >= ZONE_STRESS_THRESHOLD_READINGS;
+      zoneStressed.set(nowStressed);
+      if (LOG.isInfoEnabled()) {
+        LOG.info(
+            "🌡️ Zone stress evaluated: {} MW > {} MW threshold → {}",
+            value,
+            zoneStressThresholdMw,
+            nowStressed ? "ZONE STRESSED" : "elevated (not yet sustained)");
       }
     } else {
       consecutiveElevatedReadings.set(0);
       zoneStressed.set(false);
+      if (LOG.isInfoEnabled()) {
+        LOG.info(
+            "🌡️ Zone stress evaluated: {} MW within normal range (threshold {} MW)",
+            value,
+            zoneStressThresholdMw);
+      }
     }
   }
 }
