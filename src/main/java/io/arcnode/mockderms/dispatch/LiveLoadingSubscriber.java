@@ -23,9 +23,8 @@ import org.springframework.stereotype.Component;
  * per Joe's own call: this is purely internal to {@code mock_derms}'s own plumbing (both this
  * service and dlr-tap-regulator-sim live inside the same trust domain per {@code ems/readme.md}'s
  * deployment diagram), no spec or cross-project consistency reason to force the ADR shape here.
- * Value is a deterministic synthetic sawtooth today, replaced with a real PZEM-004T reading once
- * that hardware lands — topic string stays the same either way. Replaces {@code
- * SyntheticLoadGenerator}'s internal RNG, which was never a real measurement at all.
+ * Value is a deterministic mock sawtooth today, replaced with a real PZEM-004T reading once that
+ * hardware lands — topic string stays the same either way.
  */
 @Component
 public class LiveLoadingSubscriber {

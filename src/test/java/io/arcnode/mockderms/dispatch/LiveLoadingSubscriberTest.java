@@ -19,9 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * Unit — subscribes to dlr-tap-regulator-sim's provisional {@code test/line_loading/A} (raw float
  * string, not the canonical {@code FloatSample} JSON wrapper — a deliberately simple, non-ADR topic
  * per Joe's own call: this is purely internal to mock_derms's own plumbing, no spec or
- * cross-project consistency reason to force the ADR shape here). Replaces {@code
- * SyntheticLoadGenerator}'s internal RNG with a real (currently synthetic-valued) device publish.
- * Mocked broker, AAA.
+ * cross-project consistency reason to force the ADR shape here). The published value is a mock
+ * sawtooth until the PZEM-004T lands. Mocked broker, AAA.
  */
 @ExtendWith(MockitoExtension.class)
 class LiveLoadingSubscriberTest {

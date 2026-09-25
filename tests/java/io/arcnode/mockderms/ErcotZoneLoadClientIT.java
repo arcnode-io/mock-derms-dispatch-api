@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.OptionalDouble;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
@@ -26,9 +27,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Real OAuth2 ROPC + archive-download flow against a stubbed ERCOT, plus the synthetic fallback.
- * Both {@code ercotTokenUrl}/{@code ercotArchiveUrl} are WireMock-pointed for the happy path so the
- * test never depends on live ERCOT credentials or network access (this repo's CI has neither {@code
+ * Real OAuth2 ROPC + archive-download flow against a stubbed ERCOT, plus the no-reading path. Both
+ * {@code ercotTokenUrl}/{@code ercotArchiveUrl} are WireMock-pointed for the happy path so the test
+ * never depends on live ERCOT credentials or network access (this repo's CI has neither {@code
  * ERCOT_PASSWORD} nor {@code ERCOT_PRIMARY_KEY} set).
  */
 @SpringBootTest
@@ -100,22 +101,21 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
                     .withBody(zip(CSV))));
 
     // Act
-    double result = client.currentNorthZoneLoadMw();
+    OptionalDouble result = client.currentNorthZoneLoadMw();
 
     // Assert
-    assertThat(result).isEqualTo(1714.08);
+    assertThat(result).hasValue(1714.08);
   }
 
   @Test
-  void fallsBackToSyntheticWhenErcotAuthFails() {
+  void returnsNoReadingWhenErcotAuthFails() {
     // Arrange
     wiremock.stubFor(post("/oauth2/token").willReturn(status(401)));
 
     // Act
-    double result = client.currentNorthZoneLoadMw();
+    OptionalDouble result = client.currentNorthZoneLoadMw();
 
-    // Assert
-    assertThat(result)
-        .isBetween(ErcotZoneLoadClient.SYNTHETIC_MIN_MW, ErcotZoneLoadClient.SYNTHETIC_MAX_MW);
+    // Assert: absent, never a stand-in value — ZoneStressTracker decides what absence means
+    assertThat(result).isEmpty();
   }
 }

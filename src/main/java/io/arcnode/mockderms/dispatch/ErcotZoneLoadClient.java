@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.OptionalDouble;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.slf4j.Logger;
@@ -20,10 +20,13 @@ import org.springframework.web.client.RestClient;
 /**
  * Real-time North-zone (ERCOT weather zone) load, from the live NP3-562-CD "Intra-Hour Load
  * Forecast by Weather Zone" report — verified directly against ERCOT's Public API (5-minute
- * cadence, confirmed live), queried via {@link ErcotTokenClient}. Falls back to a labeled synthetic
- * reading on any failure (missing credentials, auth failure, rate limit, network error) — same
- * resilience shape as ems-analyst-agent's own gridstatus.io integration (markets.py), so a demo or
- * CI run without live ERCOT credentials degrades gracefully instead of failing.
+ * cadence, confirmed live), queried via {@link ErcotTokenClient}.
+ *
+ * <p>Returns no value on any failure (missing credentials, auth failure, rate limit, network error)
+ * and never substitutes a stand-in reading. A stand-in would land somewhere relative to {@code
+ * zoneStressThresholdMw} and so would silently decide whether the zone counts as stressed, which
+ * moves the dispatch threshold on fabricated data. {@link ZoneStressTracker} owns what absence
+ * means.
  *
  * <p>Called directly only by {@link ZoneStressTracker}, which caches this raw reading to IHLF's own
  * ~5-minute refresh cadence and debounces it before it ever reaches {@link TriggerEvaluator} — this
@@ -39,12 +42,6 @@ import org.springframework.web.client.RestClient;
 public class ErcotZoneLoadClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(ErcotZoneLoadClient.class);
-  // Reason: live North-zone load observed while building this (2026-09-21, IHLF's rolling 2h
-  // window) sat in the 1714-1922 MW range — keep the synthetic fallback plausible in that band
-  // rather than an arbitrary number, matching SyntheticLoadGenerator's own MVP-placeholder
-  // reasoning. Tune once this runs against more than a single day's observation.
-  public static final double SYNTHETIC_MIN_MW = 1600.0;
-  public static final double SYNTHETIC_MAX_MW = 2000.0;
 
   private final RestClient client;
   private final ErcotTokenClient tokenClient;
@@ -64,15 +61,15 @@ public class ErcotZoneLoadClient {
     this.archiveUrl = config.ercotArchiveUrl();
   }
 
-  /** Current North-zone load, MW — real IHLF data, or a synthetic fallback on any failure. */
-  public double currentNorthZoneLoadMw() {
+  /** Current North-zone load, MW — real IHLF data, or empty when ERCOT could not be read. */
+  public OptionalDouble currentNorthZoneLoadMw() {
     try {
-      return fetchReal();
+      return OptionalDouble.of(fetchReal());
     } catch (RuntimeException e) {
       if (LOG.isWarnEnabled()) {
-        LOG.warn("ERCOT IHLF call failed ({}), using synthetic North-zone load", e.toString());
+        LOG.warn("⚠️ ERCOT IHLF call failed ({}) — no North-zone reading this cycle", e.toString());
       }
-      return ThreadLocalRandom.current().nextDouble(SYNTHETIC_MIN_MW, SYNTHETIC_MAX_MW);
+      return OptionalDouble.empty();
     }
   }
 

@@ -4,6 +4,7 @@ import io.arcnode.mockderms.Config;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.OptionalDouble;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,6 +31,13 @@ import org.springframework.stereotype.Component;
  * IEEE 738 sizing attempt confirmed no physical derivation exists (the weather effect is already in
  * the live DLR reading), and no empirical one does either until real local loading telemetry
  * exists.
+ *
+ * <p>When ERCOT cannot be read at all, the last good reading still stands until it is older than
+ * {@link #MAX_USABLE_READING_AGE}; past that the zone counts as not stressed and {@link
+ * #isZoneFeedStale()} goes true. Absence therefore only ever removes the margin boost, so an
+ * unavailable feed makes the trigger less eager and can never cause a dispatch on its own. Retries
+ * are budgeted off the last *attempt*, not the last success, so a sustained ERCOT outage still
+ * costs one call per {@link #CACHE_TTL} rather than one per tick.
  */
 @Component
 public class ZoneStressTracker {
@@ -39,6 +47,10 @@ public class ZoneStressTracker {
   // Reason: matches IHLF's own real refresh cadence (confirmed live: 5-minute-updated documents)
   // — this isn't a performance shortcut, it's simply not polling faster than the data can change.
   static final Duration CACHE_TTL = Duration.ofMinutes(5);
+  // Reason: one full IHLF cadence plus slack for jitter in when the document actually lands. A
+  // reading inside this window is still the newest one ERCOT ever published; past it, we no longer
+  // know what the zone is doing.
+  static final Duration MAX_USABLE_READING_AGE = CACHE_TTL.plusMinutes(1);
   // Reason: same shape as DeliveryShortfallMonitor.SHORTFALL_THRESHOLD_TICKS.
   static final int ZONE_STRESS_THRESHOLD_READINGS = 3;
 
@@ -46,9 +58,11 @@ public class ZoneStressTracker {
   private final double zoneStressThresholdMw;
   private final Clock clock;
 
-  private final AtomicReference<@Nullable CachedReading> cached = new AtomicReference<>();
+  private final AtomicReference<@Nullable CachedReading> lastGood = new AtomicReference<>();
+  private final AtomicReference<@Nullable Instant> lastAttemptAt = new AtomicReference<>();
   private final AtomicInteger consecutiveElevatedReadings = new AtomicInteger();
   private final AtomicBoolean zoneStressed = new AtomicBoolean();
+  private final AtomicBoolean zoneFeedStale = new AtomicBoolean();
 
   private record CachedReading(double northZoneMw, Instant fetchedAt) {}
 
@@ -64,15 +78,56 @@ public class ZoneStressTracker {
     return zoneStressed.get();
   }
 
+  /**
+   * True when there is no usable ERCOT reading, so the zone-stress signal is currently unavailable
+   * rather than merely calm. Drives the demo narration and the WARN log.
+   */
+  public boolean isZoneFeedStale() {
+    refreshIfDue();
+    return zoneFeedStale.get();
+  }
+
   private void refreshIfDue() {
     Instant now = clock.instant();
-    CachedReading reading = cached.get();
-    if (reading != null && Duration.between(reading.fetchedAt(), now).compareTo(CACHE_TTL) < 0) {
+    Instant attemptedAt = lastAttemptAt.get();
+    if (attemptedAt != null && Duration.between(attemptedAt, now).compareTo(CACHE_TTL) < 0) {
       return;
     }
-    double value = zoneLoadClient.currentNorthZoneLoadMw();
+    lastAttemptAt.set(now);
+    OptionalDouble reading = zoneLoadClient.currentNorthZoneLoadMw();
+    if (reading.isEmpty()) {
+      holdOrExpireLastGood(now);
+      return;
+    }
+    double value = reading.getAsDouble();
+    lastGood.set(new CachedReading(value, now));
+    zoneFeedStale.set(false);
     recordReading(value);
-    cached.set(new CachedReading(value, now));
+  }
+
+  private void holdOrExpireLastGood(Instant now) {
+    CachedReading good = lastGood.get();
+    Duration age = good == null ? null : Duration.between(good.fetchedAt(), now);
+    if (age != null && age.compareTo(MAX_USABLE_READING_AGE) < 0) {
+      // Reason: same reading as last time, not a new observation — leave the debounce counter and
+      // the stressed state exactly where the last real reading left them.
+      if (LOG.isInfoEnabled()) {
+        LOG.info(
+            "🌡️ Zone feed unavailable — holding last good reading ({} MW, {}s old)",
+            good.northZoneMw(),
+            age.toSeconds());
+      }
+      return;
+    }
+    consecutiveElevatedReadings.set(0);
+    zoneStressed.set(false);
+    zoneFeedStale.set(true);
+    if (LOG.isWarnEnabled()) {
+      LOG.warn(
+          "⚠️ zone_feed_stale — no usable ERCOT reading (last good {}), zone counts as not"
+              + " stressed, no margin boost",
+          age == null ? "none ever" : age.toSeconds() + "s old");
+    }
   }
 
   private void recordReading(double value) {

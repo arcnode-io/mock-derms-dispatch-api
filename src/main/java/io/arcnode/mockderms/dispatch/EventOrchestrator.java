@@ -84,11 +84,16 @@ public class EventOrchestrator {
     boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneStressed);
     if (LOG.isInfoEnabled()) {
       double effectiveMargin = triggerEvaluator.effectiveMarginAmps(zoneStressed);
-      String marginBreakdown =
-          zoneStressed
-              ? "%sA local + %sA ERCOT zone-stress boost"
-                  .formatted(config.triggerMarginAmps(), config.zoneStressMarginBoostAmps())
-              : "local only, ERCOT zone not stressed";
+      String marginBreakdown;
+      if (zoneStressed) {
+        marginBreakdown =
+            "%sA local + %sA ERCOT zone-stress boost"
+                .formatted(config.triggerMarginAmps(), config.zoneStressMarginBoostAmps());
+      } else if (zoneStressTracker.isZoneFeedStale()) {
+        marginBreakdown = "local only, ERCOT zone feed stale";
+      } else {
+        marginBreakdown = "local only, ERCOT zone not stressed";
+      }
       LOG.info(
           "📊 Evaluated: loading={}A vs rating={}A, margin={}A ({}) → {}",
           loadingAmps,
