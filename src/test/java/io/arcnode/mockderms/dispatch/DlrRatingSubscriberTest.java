@@ -46,7 +46,8 @@ class DlrRatingSubscriberTest {
           "https://example.invalid/token",
           "https://example.invalid/archive",
           1800.0,
-          25.0);
+          25.0,
+          false);
   private final JsonMapper mapper = JsonMapper.builder().build();
 
   @Mock private MqttClient mqtt;

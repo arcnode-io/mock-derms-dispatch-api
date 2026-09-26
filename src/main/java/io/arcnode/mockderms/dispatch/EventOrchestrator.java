@@ -23,7 +23,6 @@ import org.springframework.stereotype.Component;
 public class EventOrchestrator {
 
   private static final Logger LOG = LoggerFactory.getLogger(EventOrchestrator.class);
-  private static final double WATTS_PER_KV_AMP = 1000.0;
   // Reason: MVP placeholder, not spec'd by anyone — same debounce reasoning as
   // DeliveryShortfallMonitor's SHORTFALL_THRESHOLD_TICKS: avoid closing on a single noisy sample
   // ("rebound trip" per the sequence diagram's own wording).
@@ -33,6 +32,7 @@ public class EventOrchestrator {
   private final LiveLoadingSubscriber loadingSubscriber;
   private final TriggerEvaluator triggerEvaluator;
   private final ZoneStressTracker zoneStressTracker;
+  private final EnvelopeDispatcher envelopeDispatcher;
   private final DerEventsClient client;
   private final Config config;
   private final Clock clock;
@@ -48,6 +48,7 @@ public class EventOrchestrator {
       LiveLoadingSubscriber loadingSubscriber,
       TriggerEvaluator triggerEvaluator,
       ZoneStressTracker zoneStressTracker,
+      EnvelopeDispatcher envelopeDispatcher,
       DerEventsClient client,
       Config config,
       Clock clock) {
@@ -55,6 +56,7 @@ public class EventOrchestrator {
     this.loadingSubscriber = loadingSubscriber;
     this.triggerEvaluator = triggerEvaluator;
     this.zoneStressTracker = zoneStressTracker;
+    this.envelopeDispatcher = envelopeDispatcher;
     this.client = client;
     this.config = config;
     this.clock = clock;
@@ -79,6 +81,9 @@ public class EventOrchestrator {
       return;
     }
     double loadingAmps = loadingAmpsBoxed;
+    // Reason: the envelope is continuous and independent of whether anything is triggering — it is
+    // the boundary, not the command.
+    envelopeDispatcher.publish(ratingAmps, loadingAmps);
     boolean zoneStressed = zoneStressTracker.isZoneStressed();
     boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneStressed);
     if (LOG.isInfoEnabled()) {
@@ -115,7 +120,7 @@ public class EventOrchestrator {
   private void dispatch(double ratingAmps, double loadingAmps, boolean zoneStressed) {
     double excessAmps =
         loadingAmps - (ratingAmps - triggerEvaluator.effectiveMarginAmps(zoneStressed));
-    double targetWatts = excessAmps * config.nominalLineVoltageKv() * WATTS_PER_KV_AMP;
+    double targetWatts = ThreePhasePower.watts(excessAmps, config.nominalLineVoltageKv());
     String mrid = Mrid.next();
     Instant now = clock.instant();
     long durationSeconds = (long) (config.maxEventDurationHours() * 3600);

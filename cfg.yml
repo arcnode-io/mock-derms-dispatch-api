@@ -20,6 +20,9 @@ local:
   # accumulating against LiveLoadingSubscriber's real telemetry. See Config's javadoc.
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
+  # Off until the gateway's envelope control law references POI power rather than the BESS
+  # module's own -- see Config's javadoc.
+  envelopeScheduleEnabled: false
 
 beta:
   logLevel: INFO
@@ -40,3 +43,6 @@ beta:
   # Arbitrary -- see local block's comment above and Config's javadoc.
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
+  # Off until the gateway's envelope control law references POI power rather than the BESS
+  # module's own -- see Config's javadoc.
+  envelopeScheduleEnabled: false

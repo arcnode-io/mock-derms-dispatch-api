@@ -38,6 +38,7 @@ class ConfigTest {
         .isEqualTo("https://api.ercot.com/api/public-reports/archive/np3-562-cd");
     assertThat(env.getProperty("app.zoneStressThresholdMw", Double.class)).isEqualTo(1800.0);
     assertThat(env.getProperty("app.zoneStressMarginBoostAmps", Double.class)).isEqualTo(25.0);
+    assertThat(env.getProperty("app.envelopeScheduleEnabled", Boolean.class)).isFalse();
   }
 
   @Test
@@ -88,7 +89,8 @@ class ConfigTest {
             "https://example.invalid/token",
             "https://example.invalid/archive",
             1800.0,
-            25.0);
+            25.0,
+            false);
 
     // Act
     var violations = validator.validate(bad);

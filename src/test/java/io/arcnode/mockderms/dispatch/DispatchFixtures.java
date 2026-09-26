@@ -8,10 +8,10 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 /**
- * Shared arrange-step fixtures for the two ZoneStressTracker test classes — imported explicitly by
- * each, never auto-discovered.
+ * Shared arrange-step fixtures for the dispatch package's unit tests — imported explicitly by each,
+ * never auto-discovered.
  */
-final class ZoneStressFixtures {
+final class DispatchFixtures {
 
   static final Instant NOW = Instant.parse("2026-09-21T12:00:00Z");
   // Reason: threshold 1800.0 — matches Config's own placeholder, kept local so these tests don't
@@ -23,9 +23,16 @@ final class ZoneStressFixtures {
   /** Past CACHE_TTL, so the next isZoneStressed() re-attempts the fetch. */
   static final Duration PAST_TTL = Duration.ofMinutes(6);
 
-  private ZoneStressFixtures() {}
+  private DispatchFixtures() {}
 
   static Config config() {
+    return config(false);
+  }
+
+  /**
+   * @param envelopeScheduleEnabled whether the continuous operating-envelope schedule is on
+   */
+  static Config config(boolean envelopeScheduleEnabled) {
     return new Config(
         Config.LogLevel.INFO,
         8080,
@@ -43,7 +50,8 @@ final class ZoneStressFixtures {
         "https://example.invalid/token",
         "https://example.invalid/archive",
         THRESHOLD_MW,
-        25.0);
+        25.0,
+        envelopeScheduleEnabled);
   }
 
   /** Advanceable fake — same pattern as EventOrchestratorTest's own MutableClock. */

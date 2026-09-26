@@ -32,7 +32,8 @@ class TriggerEvaluatorTest {
           "https://example.invalid/token",
           "https://example.invalid/archive",
           1800.0,
-          25.0);
+          25.0,
+          false);
   private final TriggerEvaluator evaluator = new TriggerEvaluator(config);
 
   @Test

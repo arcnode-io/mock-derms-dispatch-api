@@ -1,6 +1,7 @@
 package io.arcnode.mockderms.dispatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -49,13 +50,15 @@ class EventOrchestratorTest {
           "https://example.invalid/token",
           "https://example.invalid/archive",
           1800.0,
-          25.0);
+          25.0,
+          false);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
   @Mock private DlrRatingSubscriber ratingSubscriber;
   @Mock private LiveLoadingSubscriber loadingSubscriber;
   @Mock private TriggerEvaluator triggerEvaluator;
   @Mock private ZoneStressTracker zoneStressTracker;
+  @Mock private EnvelopeDispatcher envelopeDispatcher;
   @Mock private DerEventsClient client;
 
   private EventOrchestrator orchestrator() {
@@ -64,6 +67,7 @@ class EventOrchestratorTest {
         loadingSubscriber,
         triggerEvaluator,
         zoneStressTracker,
+        envelopeDispatcher,
         client,
         config,
         clock);
@@ -112,7 +116,7 @@ class EventOrchestratorTest {
   @Test
   void dispatchesWithPositiveTargetActivePowerWhenTriggering() {
     // Arrange: rating 600A, effective margin 50A, loading 560A -> 10A over threshold
-    // 10A * 13.8kV * 1000 = 138,000W
+    // sqrt(3) x 13.8kV x 1000 x 10A = 239,023W on a three-phase feeder
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
     given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0);
     given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
@@ -126,7 +130,8 @@ class EventOrchestratorTest {
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
     verify(client).dispatch(request.capture(), any());
     assertThat(request.getValue().eventStatus()).isEqualTo("ACTIVE");
-    assertThat(request.getValue().derControlBase().opModTargetW()).isEqualTo(138_000.0);
+    assertThat(request.getValue().derControlBase().opModTargetW())
+        .isCloseTo(239_023.01, within(0.01));
     assertThat(request.getValue().derControlBase().opModEnergize()).isTrue();
   }
 
@@ -149,7 +154,7 @@ class EventOrchestratorTest {
 
     // Act / Assert: dispatch -> target visible
     orchestrator.tick();
-    assertThat(orchestrator.currentTargetWatts()).isEqualTo(138_000.0);
+    assertThat(orchestrator.currentTargetWatts()).isCloseTo(239_023.01, within(0.01));
 
     // Act / Assert: sustained recovery -> closes -> target clears
     orchestrator.tick();
@@ -275,6 +280,7 @@ class EventOrchestratorTest {
             loadingSubscriber,
             triggerEvaluator,
             zoneStressTracker,
+            envelopeDispatcher,
             client,
             config,
             clock);

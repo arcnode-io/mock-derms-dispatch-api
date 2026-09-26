@@ -1,18 +1,18 @@
 package io.arcnode.mockderms.dispatch;
 
-import static io.arcnode.mockderms.dispatch.ZoneStressFixtures.ELEVATED_MW;
-import static io.arcnode.mockderms.dispatch.ZoneStressFixtures.NORMAL_MW;
-import static io.arcnode.mockderms.dispatch.ZoneStressFixtures.NOW;
-import static io.arcnode.mockderms.dispatch.ZoneStressFixtures.PAST_TTL;
-import static io.arcnode.mockderms.dispatch.ZoneStressFixtures.THRESHOLD_MW;
-import static io.arcnode.mockderms.dispatch.ZoneStressFixtures.reachStressed;
+import static io.arcnode.mockderms.dispatch.DispatchFixtures.ELEVATED_MW;
+import static io.arcnode.mockderms.dispatch.DispatchFixtures.NORMAL_MW;
+import static io.arcnode.mockderms.dispatch.DispatchFixtures.NOW;
+import static io.arcnode.mockderms.dispatch.DispatchFixtures.PAST_TTL;
+import static io.arcnode.mockderms.dispatch.DispatchFixtures.THRESHOLD_MW;
+import static io.arcnode.mockderms.dispatch.DispatchFixtures.reachStressed;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import io.arcnode.mockderms.Config;
-import io.arcnode.mockderms.dispatch.ZoneStressFixtures.MutableClock;
+import io.arcnode.mockderms.dispatch.DispatchFixtures.MutableClock;
 import java.util.OptionalDouble;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ZoneStressTrackerTest {
 
-  private final Config config = ZoneStressFixtures.config();
+  private final Config config = DispatchFixtures.config();
 
   @Mock private ErcotZoneLoadClient zoneLoadClient;
 

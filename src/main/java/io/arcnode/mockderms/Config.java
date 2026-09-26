@@ -60,6 +60,10 @@ import org.yaml.snakeyaml.Yaml;
  *     io.arcnode.mockderms.dispatch.LiveLoadingSubscriber} now carries a real device topic, but its
  *     value is still synthetic until the PZEM-004T hardware lands). Not "pending review" — there is
  *     nothing for a review to converge on until that history exists.
+ * @param envelopeScheduleEnabled when true, publish the CSIP-AUS operating envelope continuously.
+ *     Off by default: ems-industrial-gateway's envelope control law compares the import limit
+ *     against the BESS module's own active power, so a continuous envelope would clamp discharge
+ *     and fight a curtailment. Turn it on once that comparison is POI-referenced.
  * @param zoneStressMarginBoostAmps amps added to {@code triggerMarginAmps} once {@code
  *     ZoneStressTracker} reports the zone as sustained-stressed — same arbitrary-until-real-
  *     telemetry status as {@code zoneStressThresholdMw}, same reason
@@ -83,7 +87,8 @@ public record Config(
     @NotBlank String ercotTokenUrl,
     @NotBlank String ercotArchiveUrl,
     double zoneStressThresholdMw,
-    double zoneStressMarginBoostAmps) {
+    double zoneStressMarginBoostAmps,
+    boolean envelopeScheduleEnabled) {
 
   /** Log levels accepted in {@code cfg.yml} — mirrors the sibling templates. */
   public enum LogLevel {
