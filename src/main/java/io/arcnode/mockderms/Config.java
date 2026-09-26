@@ -34,7 +34,6 @@ import org.yaml.snakeyaml.Yaml;
  *     is a secret
  * @param siteId site slug for the {@code sites/{siteId}/devices/...} topics this service consumes
  *     (dlr_rtu rating, compliance return path) — same site der_control_api dispatches to
- * @param derControlApiUrl base URL for {@code POST /der-events} (constraint dispatch + event close)
  * @param publicBaseUrl this service's own externally-reachable base URL. IEEE 2030.5 requires a
  *     Notification's subscribedResource and subscriptionURI to be fully-qualified absolute URIs,
  *     and they name resources hosted here, so they cannot be derived from the peer's address.
@@ -48,7 +47,7 @@ import org.yaml.snakeyaml.Yaml;
  *     this service subscribes to — an RTU's device_id is a per-commissioning instance identifier,
  *     never guaranteed to match its template slug, so this is config, not a compile-time constant
  * @param ercotTokenUrl ERCOT Public API OAuth2 ROPC token endpoint — config (not a compile-time
- *     constant) purely so tests can point it at WireMock, same reason as {@code derControlApiUrl}
+ *     constant) purely so tests can point it at WireMock
  * @param ercotArchiveUrl ERCOT Public API archive endpoint for NP3-562-CD (Intra-Hour Load Forecast
  *     by Weather Zone) — same WireMock-testability reason as {@code ercotTokenUrl}
  * @param zoneStressThresholdMw North-zone load (MW) above which {@code ZoneStressTracker} counts a
@@ -78,7 +77,6 @@ public record Config(
     @NotBlank String mqttBrokerUrl,
     @NotBlank String mqttUsername,
     @NotBlank String siteId,
-    @NotBlank String derControlApiUrl,
     @NotBlank String publicBaseUrl,
     double nominalLineVoltageKv,
     double triggerMarginAmps,

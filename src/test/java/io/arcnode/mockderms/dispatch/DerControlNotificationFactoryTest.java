@@ -26,7 +26,10 @@ class DerControlNotificationFactoryTest {
   private static final String MRID = "0123456789abcdef0123456789abcdef";
   private static final Instant CREATED_AT = Instant.parse("2026-09-25T18:00:00Z");
   private static final Instant START = Instant.parse("2026-09-25T18:00:05Z");
-  private static final String BASE_URL = "https://mock-derms.invalid";
+  // Reason: in production these come from the client's own registered Subscription, not from a
+  // path this service makes up.
+  private static final String SUBSCRIBED_RESOURCE = "https://mock-derms.invalid/derp/1/derc";
+  private static final String SUBSCRIPTION_URI = "https://mock-derms.invalid/sub/1";
 
   /** The notification carries a DERControlList; every assertion here is about its single entry. */
   private static DERControl onlyControl(NotificationElement notification) {
@@ -50,7 +53,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(request, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            request, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     String xml = Ieee20305Xml.marshal(notification);
 
     // Assert
@@ -64,7 +68,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(request, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            request, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     DERControl control = onlyControl(notification);
 
     // Assert: 1.5 MW cannot fit an Int16 unscaled
@@ -80,7 +85,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(request, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            request, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     DERControl control = onlyControl(notification);
 
     // Assert
@@ -94,7 +100,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(request, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            request, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     DERControl control = onlyControl(notification);
 
     // Assert: EventStatus is a complex type, not a bare string — currentStatus 1 = Active
@@ -111,7 +118,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(request, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            request, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     DERControl control = onlyControl(notification);
 
     // Assert: TimeType is an Int64 count of seconds since the epoch
@@ -132,7 +140,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(close, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            close, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     DERControl control = onlyControl(notification);
     String xml = Ieee20305Xml.marshal(notification);
 
@@ -153,7 +162,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(envelope, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            envelope, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     DERControl control = onlyControl(notification);
     Element importLimit = (Element) control.getDERControlBase().getAny().get(0);
 
@@ -176,7 +186,8 @@ class DerControlNotificationFactoryTest {
 
     // Act
     NotificationElement notification =
-        DerControlNotificationFactory.build(envelope, CREATED_AT, BASE_URL);
+        DerControlNotificationFactory.build(
+            envelope, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI);
     Element importLimit = (Element) onlyControl(notification).getDERControlBase().getAny().get(0);
 
     // Assert: CSIP-AUS types these as the IEEE ActivePower, so 500 kW is value 5000 at multiplier 2
@@ -196,7 +207,9 @@ class DerControlNotificationFactoryTest {
 
     // Act
     String xml =
-        Ieee20305Xml.marshal(DerControlNotificationFactory.build(envelope, CREATED_AT, BASE_URL));
+        Ieee20305Xml.marshal(
+            DerControlNotificationFactory.build(
+                envelope, CREATED_AT, SUBSCRIBED_RESOURCE, SUBSCRIPTION_URI));
 
     // Assert: xs:any is processContents="lax", so the extension passes because no declaration for
     // it is loaded, not because it was checked. The IEEE half of the document is genuinely

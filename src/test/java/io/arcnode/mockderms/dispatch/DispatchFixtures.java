@@ -41,7 +41,6 @@ final class DispatchFixtures {
         "tcp://localhost:1883",
         "arcnode_mock_derms_dispatch_api",
         "site_001",
-        "http://localhost:8080",
         "http://localhost:8081",
         13.8,
         50.0,

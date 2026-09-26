@@ -11,7 +11,9 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.arcnode.mockderms.dispatch.DerEventsClient;
 import io.arcnode.mockderms.dispatch.MockUtilityIdentity;
+import io.arcnode.mockderms.dispatch.SubscriptionRegistry;
 import io.arcnode.mockderms.dispatch.dto.DerEventRequest;
+import io.arcnode.mockderms.mirror.ieee20305.SubscriptionElement;
 import java.time.Instant;
 import java.util.Locale;
 import org.junit.jupiter.api.Assumptions;
@@ -20,11 +22,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** POST /der-events over real HTTP, downstream stubbed — mirrors CallApiResourceIT's pattern. */
+/**
+ * The utility pushing a DERControl Notification over real HTTP to wherever the site's Subscription
+ * said to push it — downstream stubbed. There is no configured address for the site: the
+ * notificationURI in the registered Subscription is the only destination, so this IT registers one
+ * first, which is the handshake the spec describes.
+ */
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
 class DerEventsClientIT extends AbstractBrokerIT {
@@ -33,22 +38,31 @@ class DerEventsClientIT extends AbstractBrokerIT {
   static WireMockExtension wiremock =
       WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
-  @DynamicPropertySource
-  static void downstream(DynamicPropertyRegistry registry) {
-    registry.add("app.derControlApiUrl", wiremock::baseUrl);
-  }
-
   // Reason: mRIDType is HexBinary128 — 32 hex characters — so a readable label cannot be one.
   private static final String MRID = "0123456789abcdef0123456789abcdef";
   private static final Instant CREATED_AT = Instant.parse("2026-09-21T00:00:00Z");
 
   @Autowired Config config;
   @Autowired DerEventsClient client;
+  @Autowired SubscriptionRegistry subscriptions;
 
   @BeforeEach
   void setup() {
     // Reason: e2e profile (beta) points at the real endpoint — skip the stubbed assertion there.
     Assumptions.assumeFalse(config.e2e(), "e2e profile hits the real downstream");
+    subscriptions.register(subscriptionTo(wiremock.baseUrl() + "/der-events"));
+  }
+
+  /** What the site POSTs to /sub to say where it wants Notifications delivered. */
+  private static SubscriptionElement subscriptionTo(String notificationUri) {
+    SubscriptionElement subscription = new SubscriptionElement();
+    subscription.setSubscribedResource("https://utility.invalid/derp/1/derc");
+    subscription.setNotificationURI(notificationUri);
+    // Reason: Subscription::encoding 0 = application/sep+xml, per sep.xsd.
+    subscription.setEncoding((short) 0);
+    subscription.setLevel("+S2");
+    subscription.setLimit(1L);
+    return subscription;
   }
 
   private static DerEventRequest request() {

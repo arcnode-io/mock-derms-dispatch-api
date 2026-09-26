@@ -39,11 +39,6 @@ public final class DerControlNotificationFactory {
   // Reason: Notification::status 0 = "Default Status" per sep.xsd. The non-zero codes all mean the
   // subscription was cancelled, which is not what a routine control push reports.
   private static final short NOTIFICATION_STATUS_DEFAULT = 0;
-  // Reason: 2030.5 resources are discovered by following links, so the spec fixes no URI paths.
-  // These are ours; only their absoluteness is a schema requirement (xs:anyURI, "SHALL be a
-  // fully-qualified absolute URI").
-  private static final String DER_CONTROL_LIST_PATH = "/derp/1/derc";
-  private static final String SUBSCRIPTION_PATH = "/sub/1";
   // Reason: CSIP-AUS's own targetNamespace, and it is versioned — taken from csipaus-ext-v1.3.xsd
   // in bsgip/envoy-schema, the reference implementation from the group that authored CSIP-AUS. The
   // unversioned https://csipaus.org/ns belongs to an earlier release.
@@ -61,15 +56,20 @@ public final class DerControlNotificationFactory {
   /**
    * @param request what this service decided to dispatch, in its own internal types
    * @param creationTime when the control was created — {@code Event::creationTime} is mandatory
-   * @param publicBaseUrl this service's own externally-reachable base URL, used to build the
-   *     absolute subscription URIs the schema requires
+   * @param subscribedResource the resource the client subscribed to, echoed from its own
+   *     Subscription
+   * @param subscriptionUri the absolute URI of the Subscription this notification is triggered by —
+   *     a real, servable resource, not a placeholder
    */
   public static NotificationElement build(
-      DerEventRequest request, Instant creationTime, String publicBaseUrl) {
+      DerEventRequest request,
+      Instant creationTime,
+      String subscribedResource,
+      String subscriptionUri) {
     NotificationElement notification = new NotificationElement();
     notification.setSchemaVer(SCHEMA_VERSION);
-    notification.setSubscribedResource(publicBaseUrl + DER_CONTROL_LIST_PATH);
-    notification.setSubscriptionURI(publicBaseUrl + SUBSCRIPTION_PATH);
+    notification.setSubscribedResource(subscribedResource);
+    notification.setSubscriptionURI(subscriptionUri);
     notification.setStatus(NOTIFICATION_STATUS_DEFAULT);
     notification.setCreatedDateTime(time(creationTime));
     notification.setResource(controlList(request, creationTime));

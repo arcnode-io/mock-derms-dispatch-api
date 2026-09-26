@@ -50,7 +50,6 @@ class ConfigTest {
     assertThat(env.getProperty("app.port", Integer.class)).isEqualTo(8080);
     assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
     assertThat(env.getProperty("app.e2e", Boolean.class)).isFalse();
-    assertThat(env.getProperty("app.derControlApiUrl")).isEqualTo("http://localhost:8080");
     assertThat(env.getProperty("app.nominalLineVoltageKv", Double.class)).isEqualTo(13.8);
     assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(4.0);
@@ -120,7 +119,6 @@ class ConfigTest {
             "tcp://localhost:1883",
             "user",
             "site",
-            "http://localhost:8080",
             "http://localhost:8081",
             13.8,
             50.0,

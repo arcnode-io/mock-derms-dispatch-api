@@ -3,7 +3,10 @@ package io.arcnode.mockderms.dispatch;
 import io.arcnode.mockderms.Config;
 import io.arcnode.mockderms.dispatch.dto.DerEventRequest;
 import io.arcnode.mockderms.mirror.Ieee20305Xml;
+import java.net.URI;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -22,22 +25,26 @@ public class DerEventsClient {
 
   private static final String SEP_XML = "application/sep+xml";
 
+  private static final Logger LOG = LoggerFactory.getLogger(DerEventsClient.class);
+
   private final RestClient client;
   private final String publicBaseUrl;
+  private final SubscriptionRegistry subscriptions;
 
-  public DerEventsClient(RestClient.Builder builder, Config config) {
+  public DerEventsClient(
+      RestClient.Builder builder, Config config, SubscriptionRegistry subscriptions) {
     this.publicBaseUrl = config.publicBaseUrl();
+    this.subscriptions = subscriptions;
     // Reason: the JDK HttpClient-backed default request factory hit a real, reproducible
     // EOFException from its own Http2Connection code against WireMock — confirmed across two
     // separate clean `mvn verify` runs (pass, then fail, no code change in between), so this
     // isn't a one-off. Neither WireMock nor der-control-api's own Tomcat has any HTTP/2 to
     // negotiate anyway. SimpleClientHttpRequestFactory is backed by HttpURLConnection, which
     // cannot speak HTTP/2 at all — verified reliable across repeated clean-recompiled runs.
-    this.client =
-        builder
-            .requestFactory(new SimpleClientHttpRequestFactory())
-            .baseUrl(config.derControlApiUrl())
-            .build();
+    // Reason: no baseUrl — the destination is whatever absolute notificationURI the client
+    // registered, which is the whole point of the Subscription. This service holds no address for
+    // the site of its own.
+    this.client = builder.requestFactory(new SimpleClientHttpRequestFactory()).build();
   }
 
   /**
@@ -46,12 +53,25 @@ public class DerEventsClient {
    * @param creationTime when this control was created — {@code Event::creationTime} is mandatory
    */
   public void dispatch(DerEventRequest request, Instant creationTime) {
+    SubscriptionRegistry.Registered subscription = subscriptions.active().orElse(null);
+    if (subscription == null) {
+      LOG.warn(
+          "⚠️ No Subscription registered — nothing to notify. The site registers one at POST {},"
+              + " and until it does this utility has no destination to push a DERControl to.",
+          SubscriptionController.PATH);
+      return;
+    }
+    String subscriptionUri = publicBaseUrl + SubscriptionController.PATH + "/" + subscription.id();
     String document =
         Ieee20305Xml.marshal(
-            DerControlNotificationFactory.build(request, creationTime, publicBaseUrl));
+            DerControlNotificationFactory.build(
+                request,
+                creationTime,
+                subscription.subscription().getSubscribedResource(),
+                subscriptionUri));
     client
         .post()
-        .uri("/der-events")
+        .uri(URI.create(subscription.notificationUri()))
         .contentType(MediaType.parseMediaType(SEP_XML))
         .header("X-SSL-Client-Cert", MockUtilityIdentity.HEADER_VALUE)
         .body(document)

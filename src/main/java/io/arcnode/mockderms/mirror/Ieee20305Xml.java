@@ -4,6 +4,7 @@ import io.arcnode.mockderms.mirror.ieee20305.DERControl;
 import io.arcnode.mockderms.mirror.ieee20305.MirrorUsagePoint;
 import io.arcnode.mockderms.mirror.ieee20305.MirrorUsagePointElement;
 import io.arcnode.mockderms.mirror.ieee20305.NotificationElement;
+import io.arcnode.mockderms.mirror.ieee20305.SubscriptionElement;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
@@ -41,6 +42,30 @@ public final class Ieee20305Xml {
           unmarshaller.unmarshal(new StreamSource(new StringReader(xml)));
     } catch (JAXBException e) {
       throw new IllegalArgumentException("failed to parse MirrorUsagePoint", e);
+    }
+  }
+
+  /** Parses an inbound {@code Subscription}. */
+  public static SubscriptionElement unmarshalSubscription(String xml) {
+    try {
+      JAXBContext context = JAXBContext.newInstance(SubscriptionElement.class);
+      Unmarshaller unmarshaller = context.createUnmarshaller();
+      return (SubscriptionElement) unmarshaller.unmarshal(new StreamSource(new StringReader(xml)));
+    } catch (JAXBException | ClassCastException e) {
+      throw new IllegalArgumentException("failed to parse Subscription", e);
+    }
+  }
+
+  /** Marshals a {@code SubscriptionElement} as the XML document's root element. */
+  public static String marshal(SubscriptionElement subscription) {
+    try {
+      JAXBContext context = JAXBContext.newInstance(SubscriptionElement.class);
+      Marshaller marshaller = context.createMarshaller();
+      StringWriter writer = new StringWriter();
+      marshaller.marshal(subscription, writer);
+      return writer.toString();
+    } catch (JAXBException e) {
+      throw new IllegalStateException("failed to marshal Subscription", e);
     }
   }
 
