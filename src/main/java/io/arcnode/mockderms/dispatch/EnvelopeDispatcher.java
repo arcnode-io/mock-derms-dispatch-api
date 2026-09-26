@@ -44,12 +44,15 @@ public class EnvelopeDispatcher {
    * @param ratingAmps the line's live dynamic rating
    * @param loadingAmps live line loading. Until site-import coupling lands this is treated as other
    *     customers' load, so the site's own import is not subtracted out of it first.
+   * @param effectiveMarginAmps the margin the trigger is currently working to, including any ERCOT
+   *     zone-stress boost. The published ceiling has to reflect the same conservatism the trigger
+   *     enforces, or a site obeying the envelope exactly would still be curtailed for doing so.
    */
-  public void publish(double ratingAmps, double loadingAmps) {
+  public void publish(double ratingAmps, double loadingAmps, double effectiveMarginAmps) {
     if (!config.envelopeScheduleEnabled()) {
       return;
     }
-    double headroomAmps = Math.max(0.0, ratingAmps - config.triggerMarginAmps() - loadingAmps);
+    double headroomAmps = Math.max(0.0, ratingAmps - effectiveMarginAmps - loadingAmps);
     double importLimitWatts = ThreePhasePower.watts(headroomAmps, config.nominalLineVoltageKv());
     Instant now = clock.instant();
     client.dispatch(

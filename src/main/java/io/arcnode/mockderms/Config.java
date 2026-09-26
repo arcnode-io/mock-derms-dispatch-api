@@ -61,9 +61,9 @@ import org.yaml.snakeyaml.Yaml;
  *     value is still synthetic until the PZEM-004T hardware lands). Not "pending review" — there is
  *     nothing for a review to converge on until that history exists.
  * @param envelopeScheduleEnabled when true, publish the CSIP-AUS operating envelope continuously.
- *     Off by default: ems-industrial-gateway's envelope control law compares the import limit
- *     against the BESS module's own active power, so a continuous envelope would clamp discharge
- *     and fight a curtailment. Turn it on once that comparison is POI-referenced.
+ *     The envelope is a boundary rather than a command, so it goes out every evaluation interval
+ *     whether or not anything is triggering. A deployment whose gateway cannot honour a
+ *     connection-point limit can switch it off without a code change.
  * @param zoneStressMarginBoostAmps amps added to {@code triggerMarginAmps} once {@code
  *     ZoneStressTracker} reports the zone as sustained-stressed — same arbitrary-until-real-
  *     telemetry status as {@code zoneStressThresholdMw}, same reason
@@ -117,7 +117,6 @@ public record Config(
   public static class Loader implements EnvironmentPostProcessor {
 
     private static final String CONFIG_FILE = "cfg.yml";
-    private static final String BETA = "beta";
     private static final String DEFAULT_BLOCK = "local";
     private static final String PROPERTY_SOURCE_NAME = "cfg.yml";
 
@@ -131,7 +130,10 @@ public record Config(
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication app) {
       String env =
           environment.getProperty("ENV", System.getenv().getOrDefault("ENV", DEFAULT_BLOCK));
-      Map<String, Object> block = readBlock(BETA.equals(env) ? BETA : DEFAULT_BLOCK);
+      // Reason: the block is whichever one $ENV names, so adding a cfg.yml block is enough to add a
+      // profile. readBlock throws on a name with no block, rather than quietly running something
+      // else — a silent fallback would surface as a behaviour bug instead of a misconfiguration.
+      Map<String, Object> block = readBlock(env);
 
       Map<String, Object> resolved = new LinkedHashMap<>();
       block.forEach(

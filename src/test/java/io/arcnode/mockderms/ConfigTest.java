@@ -1,6 +1,7 @@
 package io.arcnode.mockderms;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -12,6 +13,30 @@ import org.springframework.mock.env.MockEnvironment;
 class ConfigTest {
 
   private final Config.Loader loader = new Config.Loader();
+
+  @Test
+  void selectsTheBlockNamedByEnv() {
+    // Arrange: the demo block shortens the event window so natural expiry happens on camera
+    MockEnvironment env = new MockEnvironment().withProperty("ENV", "demo");
+
+    // Act
+    loader.postProcessEnvironment(env, new SpringApplication());
+
+    // Assert
+    assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(0.1);
+  }
+
+  @Test
+  void failsLoudlyWhenEnvNamesNoBlock() {
+    // Arrange: silently falling back to local would run the wrong configuration and look like a
+    // behaviour bug rather than a misconfiguration
+    MockEnvironment env = new MockEnvironment().withProperty("ENV", "nope");
+
+    // Act / Assert
+    assertThatThrownBy(() -> loader.postProcessEnvironment(env, new SpringApplication()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("nope");
+  }
 
   @Test
   void defaultsToLocalBlock() {
@@ -38,12 +63,12 @@ class ConfigTest {
         .isEqualTo("https://api.ercot.com/api/public-reports/archive/np3-562-cd");
     assertThat(env.getProperty("app.zoneStressThresholdMw", Double.class)).isEqualTo(1800.0);
     assertThat(env.getProperty("app.zoneStressMarginBoostAmps", Double.class)).isEqualTo(25.0);
-    assertThat(env.getProperty("app.envelopeScheduleEnabled", Boolean.class)).isFalse();
+    assertThat(env.getProperty("app.envelopeScheduleEnabled", Boolean.class)).isTrue();
   }
 
   @Test
-  void unknownEnvFallsBackToLocalBlock() {
-    // Arrange: the CI runner exports ENV=ci — must behave like the siblings (fall through to local)
+  void resolvesTheCiBlockTheRunnerAsksFor() {
+    // Arrange: the gitlab-runner host exports ENV=ci, so `ci` names a real block
     MockEnvironment env = new MockEnvironment().withProperty("ENV", "ci");
 
     // Act
@@ -52,6 +77,21 @@ class ConfigTest {
     // Assert
     assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
     assertThat(env.getProperty("app.e2e", Boolean.class)).isFalse();
+  }
+
+  @Test
+  void demoOverridesOnlyTheEventWindowAndInheritsTheRest() {
+    // Arrange: demo is merged from local, so everything it does not override must match
+    MockEnvironment env = new MockEnvironment().withProperty("ENV", "demo");
+
+    // Act
+    loader.postProcessEnvironment(env, new SpringApplication());
+
+    // Assert
+    assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(0.1);
+    assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
+    assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
+    assertThat(env.getProperty("app.envelopeScheduleEnabled", Boolean.class)).isTrue();
   }
 
   @Test

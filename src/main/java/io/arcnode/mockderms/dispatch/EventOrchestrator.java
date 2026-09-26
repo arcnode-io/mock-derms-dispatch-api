@@ -81,13 +81,13 @@ public class EventOrchestrator {
       return;
     }
     double loadingAmps = loadingAmpsBoxed;
-    // Reason: the envelope is continuous and independent of whether anything is triggering — it is
-    // the boundary, not the command.
-    envelopeDispatcher.publish(ratingAmps, loadingAmps);
     boolean zoneStressed = zoneStressTracker.isZoneStressed();
+    double effectiveMargin = triggerEvaluator.effectiveMarginAmps(zoneStressed);
+    // Reason: the envelope is continuous and independent of whether anything is triggering — it is
+    // the boundary, not the command. It carries the same margin the trigger uses so the two agree.
+    envelopeDispatcher.publish(ratingAmps, loadingAmps, effectiveMargin);
     boolean triggering = triggerEvaluator.shouldTrigger(ratingAmps, loadingAmps, zoneStressed);
     if (LOG.isInfoEnabled()) {
-      double effectiveMargin = triggerEvaluator.effectiveMarginAmps(zoneStressed);
       String marginBreakdown;
       if (zoneStressed) {
         marginBreakdown =
