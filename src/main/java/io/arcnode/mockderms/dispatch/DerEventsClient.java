@@ -55,10 +55,12 @@ public class DerEventsClient {
   public void dispatch(DerEventRequest request, Instant creationTime) {
     SubscriptionRegistry.Registered subscription = subscriptions.active().orElse(null);
     if (subscription == null) {
-      LOG.warn(
-          "⚠️ No Subscription registered — nothing to notify. The site registers one at POST {},"
-              + " and until it does this utility has no destination to push a DERControl to.",
-          SubscriptionController.PATH);
+      if (LOG.isWarnEnabled()) {
+        LOG.warn(
+            "⚠️ No Subscription registered — nothing to notify. The site registers one at POST {},"
+                + " and until it does this utility has no destination to push a DERControl to.",
+            SubscriptionController.PATH);
+      }
       return;
     }
     String subscriptionUri = publicBaseUrl + SubscriptionController.PATH + "/" + subscription.id();
