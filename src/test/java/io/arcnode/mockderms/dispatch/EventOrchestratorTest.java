@@ -41,6 +41,7 @@ class EventOrchestratorTest {
           "arcnode_mock_derms_dispatch_api",
           "site_001",
           "http://localhost:8080",
+          "http://localhost:8081",
           13.8,
           50.0,
           4.0,
@@ -77,7 +78,7 @@ class EventOrchestratorTest {
     orchestrator().tick();
 
     // Assert
-    verify(client, never()).dispatch(any());
+    verify(client, never()).dispatch(any(), any());
   }
 
   @Test
@@ -90,7 +91,7 @@ class EventOrchestratorTest {
     orchestrator().tick();
 
     // Assert
-    verify(client, never()).dispatch(any());
+    verify(client, never()).dispatch(any(), any());
   }
 
   @Test
@@ -105,7 +106,7 @@ class EventOrchestratorTest {
     orchestrator().tick();
 
     // Assert
-    verify(client, never()).dispatch(any());
+    verify(client, never()).dispatch(any(), any());
   }
 
   @Test
@@ -123,7 +124,7 @@ class EventOrchestratorTest {
 
     // Assert
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client).dispatch(request.capture());
+    verify(client).dispatch(request.capture(), any());
     assertThat(request.getValue().eventStatus()).isEqualTo("ACTIVE");
     assertThat(request.getValue().derControlBase().opModTargetW()).isEqualTo(138_000.0);
     assertThat(request.getValue().derControlBase().opModEnergize()).isTrue();
@@ -173,7 +174,7 @@ class EventOrchestratorTest {
     orchestrator.tick();
 
     // Assert
-    verify(client, times(1)).dispatch(any());
+    verify(client, times(1)).dispatch(any(), any());
   }
 
   @Test
@@ -191,14 +192,14 @@ class EventOrchestratorTest {
     // Act: two recovered samples — not sustained yet
     orchestrator.tick();
     orchestrator.tick();
-    verify(client, times(1)).dispatch(any());
+    verify(client, times(1)).dispatch(any(), any());
 
     // Act: third consecutive recovered sample — sustained
     orchestrator.tick();
 
     // Assert
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client, times(2)).dispatch(request.capture());
+    verify(client, times(2)).dispatch(request.capture(), any());
     DerEventRequest close = request.getAllValues().get(1);
     assertThat(close.eventStatus()).isEqualTo("CANCELLED");
     assertThat(close.mrid()).isEqualTo(request.getAllValues().get(0).mrid());
@@ -223,11 +224,11 @@ class EventOrchestratorTest {
     orchestrator.tick(); // triggering again -> resets
     orchestrator.tick(); // recovered (1/3)
     orchestrator.tick(); // recovered (2/3)
-    verify(client, times(1)).dispatch(any());
+    verify(client, times(1)).dispatch(any(), any());
     orchestrator.tick(); // recovered (3/3) -> closes
 
     // Assert
-    verify(client, times(2)).dispatch(any());
+    verify(client, times(2)).dispatch(any(), any());
   }
 
   /** Advanceable fake — lets one orchestrator instance see time pass across ticks. */
@@ -285,7 +286,7 @@ class EventOrchestratorTest {
 
     // Assert
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client, times(2)).dispatch(request.capture());
+    verify(client, times(2)).dispatch(request.capture(), any());
     assertThat(request.getAllValues().get(1).eventStatus()).isEqualTo("COMPLETED");
   }
 }

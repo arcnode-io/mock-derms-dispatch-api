@@ -5,7 +5,6 @@ import io.arcnode.mockderms.dispatch.dto.DerEventRequest;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
@@ -117,7 +116,7 @@ public class EventOrchestrator {
     double excessAmps =
         loadingAmps - (ratingAmps - triggerEvaluator.effectiveMarginAmps(zoneStressed));
     double targetWatts = excessAmps * config.nominalLineVoltageKv() * WATTS_PER_KV_AMP;
-    String mrid = UUID.randomUUID().toString();
+    String mrid = Mrid.next();
     Instant now = clock.instant();
     long durationSeconds = (long) (config.maxEventDurationHours() * 3600);
     DerEventRequest.Interval interval = new DerEventRequest.Interval(now, durationSeconds);
@@ -130,7 +129,8 @@ public class EventOrchestrator {
             mrid,
             "ACTIVE",
             interval,
-            new DerEventRequest.ControlBase(targetWatts, true, null, null)));
+            new DerEventRequest.ControlBase(targetWatts, true, null, null)),
+        now);
     activeEvent.set(new ActiveEvent(mrid, now, interval, targetWatts));
     consecutiveRecoveryTicks.set(0);
     LOG.info(
@@ -168,7 +168,8 @@ public class EventOrchestrator {
             current.mrid(),
             eventStatus,
             current.interval(),
-            new DerEventRequest.ControlBase(null, null, null, null)));
+            new DerEventRequest.ControlBase(null, null, null, null)),
+        clock.instant());
     activeEvent.set(null);
     consecutiveRecoveryTicks.set(0);
     if (LOG.isInfoEnabled()) {

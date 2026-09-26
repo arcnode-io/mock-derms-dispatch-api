@@ -35,6 +35,9 @@ import org.yaml.snakeyaml.Yaml;
  * @param siteId site slug for the {@code sites/{siteId}/devices/...} topics this service consumes
  *     (dlr_rtu rating, compliance return path) — same site der_control_api dispatches to
  * @param derControlApiUrl base URL for {@code POST /der-events} (constraint dispatch + event close)
+ * @param publicBaseUrl this service's own externally-reachable base URL. IEEE 2030.5 requires a
+ *     Notification's subscribedResource and subscriptionURI to be fully-qualified absolute URIs,
+ *     and they name resources hosted here, so they cannot be derived from the peer's address.
  * @param nominalLineVoltageKv fixed per-deployment line voltage — converts {@code
  *     dynamic_line_rating} (amps, IEEE 738 ampacity) to a power headroom, done once here rather
  *     than the utility's own grid infrastructure being something our topology would ever model
@@ -72,6 +75,7 @@ public record Config(
     @NotBlank String mqttUsername,
     @NotBlank String siteId,
     @NotBlank String derControlApiUrl,
+    @NotBlank String publicBaseUrl,
     double nominalLineVoltageKv,
     double triggerMarginAmps,
     double maxEventDurationHours,

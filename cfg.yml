@@ -7,6 +7,7 @@ local:
   mqttUsername: arcnode_mock_derms_dispatch_api
   siteId: site_001
   derControlApiUrl: http://localhost:8080
+  publicBaseUrl: http://localhost:8081
   nominalLineVoltageKv: 13.8
   triggerMarginAmps: 50.0
   maxEventDurationHours: 4.0
@@ -29,6 +30,7 @@ beta:
   mqttUsername: arcnode_mock_derms_dispatch_api
   siteId: arcnode_beta
   derControlApiUrl: http://der-control-api:8080
+  publicBaseUrl: http://mock-derms-dispatch-api:8080
   nominalLineVoltageKv: 13.8
   triggerMarginAmps: 50.0
   maxEventDurationHours: 4.0
