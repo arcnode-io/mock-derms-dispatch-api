@@ -49,6 +49,8 @@ public final class DerControlNotificationFactory {
   // unversioned https://csipaus.org/ns belongs to an earlier release.
   private static final String CSIP_AUS_NS = "https://csipaus.org/ns/v1.3";
   private static final String SEP_NS = "urn:ieee:std:2030.5:ns";
+  private static final String DISALLOW_DOCTYPE =
+      "http://apache.org/xml/features/disallow-doctype-decl";
   // Reason: DERControlBase's extension slot is xs:any namespace="##other", so an extension element
   // must sit outside the sep namespace or the document stops validating.
   private static final String IMPORT_LIMIT = "opModImpLimW";
@@ -173,6 +175,9 @@ public final class DerControlNotificationFactory {
     try {
       DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
       factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+      // Reason: this factory only ever builds a document from scratch, never parses input, but a
+      // parser that accepts DOCTYPE declarations is an XXE vector the moment someone reuses it.
+      factory.setFeature(DISALLOW_DOCTYPE, true);
       factory.setNamespaceAware(true);
       return factory.newDocumentBuilder().newDocument();
     } catch (ParserConfigurationException e) {
