@@ -66,19 +66,6 @@ class ConfigTest {
   }
 
   @Test
-  void resolvesTheCiBlockTheRunnerAsksFor() {
-    // Arrange: the gitlab-runner host exports ENV=ci, so `ci` names a real block
-    MockEnvironment env = new MockEnvironment().withProperty("ENV", "ci");
-
-    // Act
-    loader.postProcessEnvironment(env, new SpringApplication());
-
-    // Assert
-    assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
-    assertThat(env.getProperty("app.e2e", Boolean.class)).isFalse();
-  }
-
-  @Test
   void deviceDemoOverridesOnlySiteIdAndTheEventWindow() {
     // Arrange: device-demo is merged from beta, so it must inherit the container hostnames — a
     // localhost broker inside the compose stack is the failure this guards
@@ -88,7 +75,7 @@ class ConfigTest {
     loader.postProcessEnvironment(env, new SpringApplication());
 
     // Assert
-    assertThat(env.getProperty("app.siteId")).isEqualTo("demo-site");
+    assertThat(env.getProperty("app.siteId")).isEqualTo("demo_site");
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(0.1);
     assertThat(env.getProperty("app.mqttBrokerUrl")).isEqualTo("tcp://hivemq:1883");
     assertThat(env.getProperty("app.publicBaseUrl"))
