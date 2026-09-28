@@ -1,6 +1,9 @@
 local:
   logLevel: INFO
-  port: 8080
+  # Reason: 8081, not 8080 — der-control-api's local block also defaults to 8080 and looks for this
+  # service at localhost:8081, which is also what publicBaseUrl below advertises. Running both
+  # locally on 8080 collided and left der-control-api posting subscriptions into nothing.
+  port: 8081
   host: 127.0.0.1
   e2e: false
   mqttBrokerUrl: tcp://localhost:1883

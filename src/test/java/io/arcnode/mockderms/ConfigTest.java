@@ -47,7 +47,8 @@ class ConfigTest {
     loader.postProcessEnvironment(env, new SpringApplication());
 
     // Assert
-    assertThat(env.getProperty("app.port", Integer.class)).isEqualTo(8080);
+    // Reason: 8081 so both services can run locally at once — der-control-api takes 8080.
+    assertThat(env.getProperty("app.port", Integer.class)).isEqualTo(8081);
     assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
     assertThat(env.getProperty("app.e2e", Boolean.class)).isFalse();
     assertThat(env.getProperty("app.nominalLineVoltageKv", Double.class)).isEqualTo(13.8);
