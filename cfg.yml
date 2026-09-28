@@ -21,18 +21,12 @@ local: &local
   zoneStressMarginBoostAmps: 25.0
   envelopeScheduleEnabled: true
 
-# local, but with a six-minute event window so an event reaches its natural end (COMPLETED) during a
-# demo instead of four hours later. Merged from local rather than copied, so the two cannot drift.
-demo:
-  <<: *local
-  maxEventDurationHours: 0.1
-
 # The gitlab-runner host exports ENV=ci (tooling-playbooks/gitlab-runner-setup.yml), so `ci` is a
 # real profile and needs a real block. Identical to local; the integration tests point the broker and
 # any outbound URL at their own containers.
 ci: *local
 
-beta:
+beta: &beta
   logLevel: INFO
   port: 8080
   host: 0.0.0.0
@@ -51,3 +45,13 @@ beta:
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
   envelopeScheduleEnabled: true
+
+# The full device demo: this service inside the compose stack, driven by a real DLR rating and line
+# loading, so a curtailment runs end to end. Merged from beta for the container hostnames rather than
+# copied, so the two cannot drift. Two overrides: siteId matches every other service's device-demo
+# block and the HMI's, and a six-minute window lets an event reach its natural end (COMPLETED) during
+# a demo instead of four hours later.
+device-demo:
+  <<: *beta
+  siteId: demo-site
+  maxEventDurationHours: 0.1

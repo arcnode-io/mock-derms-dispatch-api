@@ -16,8 +16,8 @@ class ConfigTest {
 
   @Test
   void selectsTheBlockNamedByEnv() {
-    // Arrange: the demo block shortens the event window so natural expiry happens on camera
-    MockEnvironment env = new MockEnvironment().withProperty("ENV", "demo");
+    // Arrange: device-demo shortens the event window so natural expiry happens on camera
+    MockEnvironment env = new MockEnvironment().withProperty("ENV", "device-demo");
 
     // Act
     loader.postProcessEnvironment(env, new SpringApplication());
@@ -79,18 +79,21 @@ class ConfigTest {
   }
 
   @Test
-  void demoOverridesOnlyTheEventWindowAndInheritsTheRest() {
-    // Arrange: demo is merged from local, so everything it does not override must match
-    MockEnvironment env = new MockEnvironment().withProperty("ENV", "demo");
+  void deviceDemoOverridesOnlySiteIdAndTheEventWindow() {
+    // Arrange: device-demo is merged from beta, so it must inherit the container hostnames — a
+    // localhost broker inside the compose stack is the failure this guards
+    MockEnvironment env = new MockEnvironment().withProperty("ENV", "device-demo");
 
     // Act
     loader.postProcessEnvironment(env, new SpringApplication());
 
     // Assert
+    assertThat(env.getProperty("app.siteId")).isEqualTo("demo-site");
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(0.1);
-    assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
+    assertThat(env.getProperty("app.mqttBrokerUrl")).isEqualTo("tcp://hivemq:1883");
+    assertThat(env.getProperty("app.publicBaseUrl"))
+        .isEqualTo("http://mock-derms-dispatch-api:8080");
     assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
-    assertThat(env.getProperty("app.envelopeScheduleEnabled", Boolean.class)).isTrue();
   }
 
   @Test
