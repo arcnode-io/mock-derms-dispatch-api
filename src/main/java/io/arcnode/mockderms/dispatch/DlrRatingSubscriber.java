@@ -26,7 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
  * sites/{site}/devices/{device_id}/measurements/dynamic_line_rating/amps}, {@code FloatSample},
  * retained. {@code device_id} is {@link Config#dlrDeviceId} — a per-commissioning instance
  * identifier (e.g. their demo unit's is {@code dlr_rtu_demo}), never the template slug ({@code
- * line_rating}) this was originally, incorrectly, assumed to be.
+ * line_rating}).
  */
 @Component
 public class DlrRatingSubscriber {
