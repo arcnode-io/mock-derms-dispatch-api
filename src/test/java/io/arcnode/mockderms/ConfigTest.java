@@ -49,7 +49,7 @@ class ConfigTest {
     // Assert
     // Reason: 8081 so both services can run locally at once — der-control-api takes 8080.
     assertThat(env.getProperty("app.port", Integer.class)).isEqualTo(8081);
-    assertThat(env.getProperty("app.siteId")).isEqualTo("site_001");
+    assertThat(env.getProperty("app.siteId")).isEqualTo("local_site");
     assertThat(env.getProperty("app.e2e", Boolean.class)).isFalse();
     assertThat(env.getProperty("app.nominalLineVoltageKv", Double.class)).isEqualTo(13.8);
     assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
@@ -76,7 +76,7 @@ class ConfigTest {
     loader.postProcessEnvironment(env, new SpringApplication());
 
     // Assert
-    assertThat(env.getProperty("app.siteId")).isEqualTo("demo_site");
+    assertThat(env.getProperty("app.siteId")).isEqualTo("device_demo_site");
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(0.1);
     assertThat(env.getProperty("app.mqttBrokerUrl")).isEqualTo("tcp://hivemq:1883");
     assertThat(env.getProperty("app.publicBaseUrl"))
@@ -93,7 +93,7 @@ class ConfigTest {
     loader.postProcessEnvironment(env, new SpringApplication());
 
     // Assert
-    assertThat(env.getProperty("app.siteId")).isEqualTo("arcnode_beta");
+    assertThat(env.getProperty("app.siteId")).isEqualTo("beta_site");
     assertThat(env.getProperty("app.e2e", Boolean.class)).isTrue();
   }
 

@@ -25,8 +25,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ExtendWith(MockitoExtension.class)
 class DlrRatingSubscriberTest {
 
-  private static final String TOPIC =
-      "sites/site_001/devices/dlr_rtu_demo/measurements/dynamic_line_rating/amps";
+  private static final String TOPIC = "utility/dlr/dlr_rtu_demo/dynamic_line_rating/amps";
 
   private final Config config =
       new Config(
@@ -36,7 +35,7 @@ class DlrRatingSubscriberTest {
           false,
           "tcp://localhost:1883",
           "arcnode_mock_derms_dispatch_api",
-          "site_001",
+          "local_site",
           "http://localhost:8081",
           13.8,
           50.0,

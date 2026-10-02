@@ -21,18 +21,22 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Subscribes to a {@code dlr_rtu} instance's {@code dynamic_line_rating} (amps, IEEE 738 ampacity)
- * and holds the latest reading. Canonical contract confirmed directly with embedded-engineer and
- * now live on real hardware — {@code
- * sites/{site}/devices/{device_id}/measurements/dynamic_line_rating/amps}, {@code FloatSample},
- * retained. {@code device_id} is {@link Config#dlrDeviceId} — a per-commissioning instance
- * identifier (e.g. their demo unit's is {@code dlr_rtu_demo}), never the template slug ({@code
- * line_rating}).
+ * and holds the latest reading. Contract with dlr-rtu-firmware: {@code
+ * utility/dlr/{device_id}/dynamic_line_rating/amps}, {@code FloatSample}, retained.
+ *
+ * <p>Reason for the {@code utility/} namespace rather than {@code sites/…/devices/…}: the DLR RTU
+ * is the utility's equipment on the utility's conductor, outside the EMS, so it does not belong in
+ * the EMS device namespace. Carrying no site id is the point — the RTU needs no knowledge of which
+ * site id the EMS is running under.
+ *
+ * <p>{@code device_id} is {@link Config#dlrDeviceId}, a per-commissioning instance identifier (a
+ * demo unit's is {@code dlr_rtu_demo}), so one utility can watch several conductors.
  */
 @Component
 public class DlrRatingSubscriber {
 
   private static final Logger LOG = LoggerFactory.getLogger(DlrRatingSubscriber.class);
-  private static final String TOPIC = "sites/%s/devices/%s/measurements/dynamic_line_rating/amps";
+  private static final String TOPIC = "utility/dlr/%s/dynamic_line_rating/amps";
 
   private final MqttClient mqtt;
   private final Config config;
@@ -55,7 +59,7 @@ public class DlrRatingSubscriber {
   /** Subscribes on application startup, after {@link io.arcnode.mockderms.MqttConfig}. */
   @EventListener(ApplicationReadyEvent.class)
   public void subscribe() throws org.eclipse.paho.mqttv5.common.MqttException {
-    String topic = TOPIC.formatted(config.siteId(), config.dlrDeviceId());
+    String topic = TOPIC.formatted(config.dlrDeviceId());
 
     // Reason: the single-topic MqttClient.subscribe(String, int, IMqttMessageListener) overload
     // recurses into itself and stack-overflows — a confirmed Paho 1.2.5 bug

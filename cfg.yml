@@ -8,7 +8,7 @@ local:
   e2e: false
   mqttBrokerUrl: tcp://localhost:1883
   mqttUsername: arcnode_mock_derms_dispatch_api
-  siteId: site_001
+  siteId: local_site
   publicBaseUrl: http://localhost:8081
   nominalLineVoltageKv: 13.8
   triggerMarginAmps: 50.0
@@ -31,7 +31,7 @@ beta: &beta
   e2e: true
   mqttBrokerUrl: tcp://hivemq:1883
   mqttUsername: arcnode_mock_derms_dispatch_api
-  siteId: arcnode_beta
+  siteId: beta_site
   publicBaseUrl: http://mock-derms-dispatch-api:8080
   nominalLineVoltageKv: 13.8
   triggerMarginAmps: 50.0
@@ -52,5 +52,5 @@ beta: &beta
 # regex allows no hyphens.
 device-demo:
   <<: *beta
-  siteId: demo_site
+  siteId: device_demo_site
   maxEventDurationHours: 0.1
