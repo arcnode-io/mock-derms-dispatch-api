@@ -11,7 +11,7 @@ stands in for the real utility/aggregator side of the DER dispatch chain during 
 testing. Per the `## DER Event` sequence in `ems/readme.md`:
 
 - Day-ahead forecast + headroom curve: not implemented — real-time monitoring only.
-- Real-time: consumes `dlr_rtu`'s live rating (MQTT) + `dlr_tap_regulator_sim`'s live line
+- Real-time: consumes `dlr_rtu`'s live rating (MQTT) + `dlr_line_loading_sim`'s live line
   loading (MQTT, `test/line_loading/A`) → trigger check. Real-time ERCOT North-zone load
   (NP3-562-CD) tightens the trigger margin when the zone's stressed — never an independent
   trigger, the local DLR trigger stays sole authority.
