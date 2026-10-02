@@ -29,8 +29,12 @@ beta: &beta
   port: 8080
   host: 0.0.0.0
   e2e: true
-  mqttBrokerUrl: tcp://hivemq:1883
-  mqttUsername: arcnode_mock_derms_dispatch_api
+  # The utility's own broker, not the EMS one: a DERMS has no business holding
+  # credentials on the plant's broker, and this service only ever reads the DLR
+  # feed and its own line loading. Plain, unauthenticated, demo-only — the EMS
+  # broker stays File-RBAC and carries sites/... exclusively.
+  mqttBrokerUrl: tcp://mock-derms-broker:1883
+  mqttUsername: mock_derms_dispatch_api
   siteId: beta_site
   publicBaseUrl: http://mock-derms-dispatch-api:8080
   nominalLineVoltageKv: 13.8

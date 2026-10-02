@@ -29,9 +29,10 @@ import org.yaml.snakeyaml.Yaml;
  * @param port HTTP listen port
  * @param host HTTP bind address
  * @param e2e when true, outbound calls hit the real endpoint instead of a WireMock stub
- * @param mqttBrokerUrl deployment broker URI, e.g. {@code tcp://hivemq:1883}
- * @param mqttUsername broker File-RBAC identity ({@code arcnode_mock_derms_dispatch_api}); password
- *     is a secret
+ * @param mqttBrokerUrl the utility's own broker, e.g. {@code tcp://mock-derms-broker:1883} — never
+ *     the EMS broker, which a DERMS holds no credentials on
+ * @param mqttUsername client identity on that broker; it is unauthenticated, so this names the
+ *     connection rather than authorizing it
  * @param siteId site slug for the {@code sites/{siteId}/devices/...} topics this service consumes
  *     (dlr_rtu rating, compliance return path) — same site der_control_api dispatches to
  * @param publicBaseUrl this service's own externally-reachable base URL. IEEE 2030.5 requires a

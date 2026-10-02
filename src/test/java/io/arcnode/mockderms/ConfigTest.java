@@ -69,7 +69,9 @@ class ConfigTest {
   @Test
   void deviceDemoOverridesOnlySiteIdAndTheEventWindow() {
     // Arrange: device-demo is merged from beta, so it must inherit the container hostnames — a
-    // localhost broker inside the compose stack is the failure this guards
+    // localhost broker inside the deployed environment is the failure this guards. The broker
+    // is the utility's own, never the EMS one: a DERMS holds no credentials on the plant's
+    // broker.
     MockEnvironment env = new MockEnvironment().withProperty("ENV", "device-demo");
 
     // Act
@@ -78,7 +80,7 @@ class ConfigTest {
     // Assert
     assertThat(env.getProperty("app.siteId")).isEqualTo("device_demo_site");
     assertThat(env.getProperty("app.maxEventDurationHours", Double.class)).isEqualTo(0.1);
-    assertThat(env.getProperty("app.mqttBrokerUrl")).isEqualTo("tcp://hivemq:1883");
+    assertThat(env.getProperty("app.mqttBrokerUrl")).isEqualTo("tcp://mock-derms-broker:1883");
     assertThat(env.getProperty("app.publicBaseUrl"))
         .isEqualTo("http://mock-derms-dispatch-api:8080");
     assertThat(env.getProperty("app.triggerMarginAmps", Double.class)).isEqualTo(50.0);
