@@ -48,7 +48,7 @@ beta: &beta
 # loading, so a curtailment runs end to end. Merged from beta for the container hostnames rather than
 # copied, so the two cannot drift. Two overrides: siteId matches every other service's device-demo
 # block and the HMI's, and a six-minute window lets an event reach its natural end (COMPLETED) during
-# a demo instead of four hours later. siteId is snake_case per ADR-002 §16 — the identifier
+# a demo instead of four hours later. siteId is snake_case per ADR-002 §9 — the identifier
 # regex allows no hyphens.
 device-demo:
   <<: *beta
