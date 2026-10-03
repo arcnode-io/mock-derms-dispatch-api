@@ -113,7 +113,7 @@ class EventOrchestratorTest {
   }
 
   @Test
-  void dispatchesWithPositiveTargetActivePowerWhenTriggering() {
+  void dispatchesAnEnvelopeConstraintWithNoSetpointWhenTriggering() {
     // Arrange: rating 600A, effective margin 50A, loading 560A -> 10A over threshold
     // sqrt(3) x 13.8kV x 1000 x 10A = 239,023W on a three-phase feeder
     given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
@@ -129,15 +129,38 @@ class EventOrchestratorTest {
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
     verify(client).dispatch(request.capture(), any());
     assertThat(request.getValue().eventStatus()).isEqualTo("ACTIVE");
-    assertThat(request.getValue().derControlBase().opModTargetW())
-        .isCloseTo(239_023.01, within(0.01));
     assertThat(request.getValue().derControlBase().opModEnergize()).isTrue();
+    // A line constraint carries no setpoint. opModTargetW is a target active power
+    // for the DER, written straight through to the plant by a consumer — and this
+    // utility has no basis to compute one, since it knows its conductor and not how
+    // the site splits load between storage and compute. The envelope constrains.
+    assertThat(request.getValue().derControlBase().opModTargetW()).isNull();
+    assertThat(request.getValue().derControlBase().opModImpLimW()).isNull();
+    assertThat(request.getValue().derControlBase().opModExpLimW()).isNull();
   }
 
   @Test
-  void currentTargetWattsIsNullBeforeAnyDispatch() {
+  void stillRecordsHowMuchReductionTheEventNeeds() {
+    // Arrange: sqrt(3) x 13.8kV x 1000 x 10A = 239,023 W of reduction on this feeder
+    given(ratingSubscriber.currentRatingAmps()).willReturn(600.0);
+    given(loadingSubscriber.currentLoadingAmps()).willReturn(560.0);
+    given(zoneStressTracker.isZoneStressed()).willReturn(ZONE_STRESSED);
+    given(triggerEvaluator.shouldTrigger(600.0, 560.0, ZONE_STRESSED)).willReturn(true);
+    given(triggerEvaluator.effectiveMarginAmps(ZONE_STRESSED)).willReturn(50.0);
+    EventOrchestrator orchestrator = orchestrator();
+
+    // Act
+    orchestrator.tick();
+
+    // Assert: kept for this utility's own compliance comparison, never sent as a
+    // setpoint.
+    assertThat(orchestrator.currentRequiredReductionWatts()).isCloseTo(239_023.01, within(0.01));
+  }
+
+  @Test
+  void currentRequiredReductionIsNullBeforeAnyDispatch() {
     // Act / Assert
-    assertThat(orchestrator().currentTargetWatts()).isNull();
+    assertThat(orchestrator().currentRequiredReductionWatts()).isNull();
   }
 
   @Test
@@ -153,13 +176,13 @@ class EventOrchestratorTest {
 
     // Act / Assert: dispatch -> target visible
     orchestrator.tick();
-    assertThat(orchestrator.currentTargetWatts()).isCloseTo(239_023.01, within(0.01));
+    assertThat(orchestrator.currentRequiredReductionWatts()).isCloseTo(239_023.01, within(0.01));
 
     // Act / Assert: sustained recovery -> closes -> target clears
     orchestrator.tick();
     orchestrator.tick();
     orchestrator.tick();
-    assertThat(orchestrator.currentTargetWatts()).isNull();
+    assertThat(orchestrator.currentRequiredReductionWatts()).isNull();
   }
 
   @Test

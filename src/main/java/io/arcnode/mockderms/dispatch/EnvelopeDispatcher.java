@@ -4,6 +4,8 @@ import io.arcnode.mockderms.Config;
 import io.arcnode.mockderms.dispatch.dto.DerEventRequest;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -33,6 +35,7 @@ public class EnvelopeDispatcher {
   private final Config config;
   private final Clock clock;
   private final String mrid = Mrid.next();
+  private final AtomicReference<@Nullable Double> lastImportLimitWatts = new AtomicReference<>();
 
   public EnvelopeDispatcher(DerEventsClient client, Config config, Clock clock) {
     this.client = client;
@@ -54,6 +57,7 @@ public class EnvelopeDispatcher {
     }
     double headroomAmps = Math.max(0.0, ratingAmps - effectiveMarginAmps - loadingAmps);
     double importLimitWatts = ThreePhasePower.watts(headroomAmps, config.nominalLineVoltageKv());
+    lastImportLimitWatts.set(importLimitWatts);
     Instant now = clock.instant();
     client.dispatch(
         new DerEventRequest(
@@ -62,5 +66,15 @@ public class EnvelopeDispatcher {
             new DerEventRequest.Interval(now, WINDOW_SECONDS),
             new DerEventRequest.ControlBase(null, null, importLimitWatts, EXPORT_LIMIT_WATTS)),
         now);
+  }
+
+  /**
+   * The import ceiling this utility last published, or {@code null} before the first send.
+   *
+   * <p>Compliance is measured against this, since it is the only number the utility actually
+   * constrains the site with.
+   */
+  public @Nullable Double currentImportLimitWatts() {
+    return lastImportLimitWatts.get();
   }
 }

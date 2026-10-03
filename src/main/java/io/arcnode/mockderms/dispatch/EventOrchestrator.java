@@ -41,7 +41,10 @@ public class EventOrchestrator {
   private final AtomicInteger consecutiveRecoveryTicks = new AtomicInteger();
 
   private record ActiveEvent(
-      String mrid, Instant dispatchedAt, DerEventRequest.Interval interval, double targetWatts) {}
+      String mrid,
+      Instant dispatchedAt,
+      DerEventRequest.Interval interval,
+      double requiredReductionWatts) {}
 
   public EventOrchestrator(
       DlrRatingSubscriber ratingSubscriber,
@@ -63,14 +66,16 @@ public class EventOrchestrator {
   }
 
   /**
-   * The currently-commanded target active power (watts), or {@code null} when no event is active.
-   * Read by the mirror package's own compliance comparison against the utility's real {@code
-   * MirrorUsagePoint} report — this service already knows what it dispatched, so it doesn't need
-   * that value repeated back to it, only the actual measured delivery.
+   * How much reduction the active event needs (watts), or {@code null} when no event is active.
+   *
+   * <p>This is a reduction, not a setpoint: it is the amount by which the conductor is over its
+   * margin, and it is deliberately never sent as {@code opModTargetW}. Read by the mirror package's
+   * compliance comparison against the utility's real {@code MirrorUsagePoint} report — this service
+   * already knows what it asked for, so it needs only the measured delivery back.
    */
-  public @Nullable Double currentTargetWatts() {
+  public @Nullable Double currentRequiredReductionWatts() {
     ActiveEvent current = activeEvent.get();
-    return current == null ? null : current.targetWatts();
+    return current == null ? null : current.requiredReductionWatts();
   }
 
   @Scheduled(fixedDelay = 5000)
@@ -120,26 +125,39 @@ public class EventOrchestrator {
   private void dispatch(double ratingAmps, double loadingAmps, boolean zoneStressed) {
     double excessAmps =
         loadingAmps - (ratingAmps - triggerEvaluator.effectiveMarginAmps(zoneStressed));
-    double targetWatts = ThreePhasePower.watts(excessAmps, config.nominalLineVoltageKv());
+    // The reduction this utility needs, which is not the same thing as a setpoint for the site.
+    double requiredReductionWatts =
+        ThreePhasePower.watts(excessAmps, config.nominalLineVoltageKv());
     String mrid = Mrid.next();
     Instant now = clock.instant();
     long durationSeconds = (long) (config.maxEventDurationHours() * 3600);
     DerEventRequest.Interval interval = new DerEventRequest.Interval(now, durationSeconds);
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("⚡ Sending event based on real-time analysis: target={}W", targetWatts);
+      LOG.info(
+          "⚡ Sending event based on real-time analysis: reduction needed={}W",
+          requiredReductionWatts);
     }
     client.dispatch(
         new DerEventRequest(
             mrid,
             "ACTIVE",
             interval,
-            new DerEventRequest.ControlBase(targetWatts, true, null, null)),
+            // Reason: no opModTargetW. The spec defines it as a target active power for the
+            // DER, and a consumer writes it straight to the plant — but a line constraint is
+            // not a setpoint, and this utility has no basis to compute one: it knows its
+            // conductor, not how the site splits load between storage and compute. The
+            // envelope (opModImpLimW, sent continuously by EnvelopeDispatcher) is the
+            // constraint. Energize stays, since the site remains connected.
+            new DerEventRequest.ControlBase(null, true, null, null)),
         now);
-    activeEvent.set(new ActiveEvent(mrid, now, interval, targetWatts));
+    activeEvent.set(new ActiveEvent(mrid, now, interval, requiredReductionWatts));
     consecutiveRecoveryTicks.set(0);
     LOG.info(
-        "dispatched mrid {} target {}W (excess {}A over margin)", mrid, targetWatts, excessAmps);
+        "dispatched mrid {} needing {}W of reduction (excess {}A over margin)",
+        mrid,
+        requiredReductionWatts,
+        excessAmps);
   }
 
   private void reassess(ActiveEvent current, boolean triggering) {
