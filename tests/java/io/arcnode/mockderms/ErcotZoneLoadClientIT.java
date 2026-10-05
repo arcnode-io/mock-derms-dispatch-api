@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.OptionalDouble;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -47,6 +48,9 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
   }
 
   @Autowired ErcotZoneLoadClient client;
+
+  /** Longer than the client's own read timeout, so the stub outlasts it. */
+  private static final Duration UNANSWERED = Duration.ofSeconds(20);
 
   private static final String CSV =
       """
@@ -105,6 +109,32 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
 
     // Assert
     assertThat(result).hasValue(1714.08);
+  }
+
+  @Test
+  void givesUpOnAnErcotThatNeverAnswersRatherThanBlockingTheControlLoop() {
+    // Arrange: ERCOT accepts the connection and then says nothing. This is the real failure seen
+    // in the demo network — api.ercot.com resolved but its TCP connect blackholed, so the call
+    // hung instead of failing, and with no timeout it never came back.
+    wiremock.stubFor(
+        post("/oauth2/token")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"id_token\": \"fake-token\"}")
+                    .withFixedDelay((int) UNANSWERED.toMillis())));
+
+    // Act
+    long startedAt = System.nanoTime();
+    OptionalDouble result = client.currentNorthZoneLoadMw();
+    Duration waited = Duration.ofNanos(System.nanoTime() - startedAt);
+
+    // Assert: absent and bounded. This runs on the scheduled control-loop thread, so a call that
+    // never returns does not merely lose the zone reading — it starves the curtailment trigger
+    // sharing that thread, which stops evaluating entirely with nothing logged.
+    assertThat(result).isEmpty();
+    assertThat(waited).isLessThan(UNANSWERED);
   }
 
   @Test

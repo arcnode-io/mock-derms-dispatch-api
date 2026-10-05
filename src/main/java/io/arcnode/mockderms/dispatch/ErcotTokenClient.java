@@ -3,6 +3,7 @@ package io.arcnode.mockderms.dispatch;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.arcnode.mockderms.Config;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
@@ -39,16 +40,32 @@ public class ErcotTokenClient {
 
   private record CachedToken(String idToken, Instant expiresAt) {}
 
+  // Reason: an unanswered ERCOT must fail, not hang. These calls run on the scheduled
+  // control-loop thread, so a request that never returns does not merely lose the zone reading —
+  // it starves the curtailment trigger sharing that thread, which stops evaluating entirely with
+  // nothing logged and both containers healthy. SimpleClientHttpRequestFactory defaults to no
+  // timeout at all, and a destination whose DNS resolves while its TCP connect blackholes hangs
+  // rather than erroring. Bounded well under the tracker's 5-minute cache, so at worst one tick
+  // per cache cycle stalls; absence then means "not stressed", which only ever removes the
+  // margin boost and can never cause a dispatch on its own.
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+  private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
+
+  /** A request factory that gives up rather than blocking the caller's thread forever. */
+  private static SimpleClientHttpRequestFactory boundedRequestFactory() {
+    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    factory.setConnectTimeout(CONNECT_TIMEOUT);
+    factory.setReadTimeout(READ_TIMEOUT);
+    return factory;
+  }
+
   public ErcotTokenClient(
       RestClient.Builder builder,
       Config config,
       @Value("${ERCOT_PASSWORD:}") String password,
       Clock clock) {
     this.client =
-        builder
-            .requestFactory(new SimpleClientHttpRequestFactory())
-            .baseUrl(config.ercotTokenUrl())
-            .build();
+        builder.requestFactory(boundedRequestFactory()).baseUrl(config.ercotTokenUrl()).build();
     this.password = password;
     this.clock = clock;
   }

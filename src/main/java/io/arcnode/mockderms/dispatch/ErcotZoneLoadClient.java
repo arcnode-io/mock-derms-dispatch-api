@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.zip.ZipEntry;
@@ -48,6 +49,25 @@ public class ErcotZoneLoadClient {
   private final String subscriptionKey;
   private final String archiveUrl;
 
+  // Reason: an unanswered ERCOT must fail, not hang. These calls run on the scheduled
+  // control-loop thread, so a request that never returns does not merely lose the zone reading —
+  // it starves the curtailment trigger sharing that thread, which stops evaluating entirely with
+  // nothing logged and both containers healthy. SimpleClientHttpRequestFactory defaults to no
+  // timeout at all, and a destination whose DNS resolves while its TCP connect blackholes hangs
+  // rather than erroring. Bounded well under the tracker's 5-minute cache, so at worst one tick
+  // per cache cycle stalls; absence then means "not stressed", which only ever removes the
+  // margin boost and can never cause a dispatch on its own.
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+  private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
+
+  /** A request factory that gives up rather than blocking the caller's thread forever. */
+  private static SimpleClientHttpRequestFactory boundedRequestFactory() {
+    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    factory.setConnectTimeout(CONNECT_TIMEOUT);
+    factory.setReadTimeout(READ_TIMEOUT);
+    return factory;
+  }
+
   public ErcotZoneLoadClient(
       RestClient.Builder builder,
       ErcotTokenClient tokenClient,
@@ -55,7 +75,7 @@ public class ErcotZoneLoadClient {
       @Value("${ERCOT_PRIMARY_KEY:}") String subscriptionKey) {
     // Reason: same HTTP/2-incapable pin as DerEventsClient — no reason to risk the same JDK
     // HttpClient/Http2Connection failure mode against a different external host.
-    this.client = builder.requestFactory(new SimpleClientHttpRequestFactory()).build();
+    this.client = builder.requestFactory(boundedRequestFactory()).build();
     this.tokenClient = tokenClient;
     this.subscriptionKey = subscriptionKey;
     this.archiveUrl = config.ercotArchiveUrl();
