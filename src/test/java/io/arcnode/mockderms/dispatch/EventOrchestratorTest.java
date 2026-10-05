@@ -50,7 +50,11 @@ class EventOrchestratorTest {
           "https://example.invalid/archive",
           1800.0,
           25.0,
-          false);
+          false,
+          100.0,
+          1120.0,
+          4.0,
+          20.0);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
   @Mock private DlrRatingSubscriber ratingSubscriber;

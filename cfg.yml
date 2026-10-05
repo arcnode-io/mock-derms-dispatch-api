@@ -23,6 +23,15 @@ local:
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
   envelopeScheduleEnabled: true
+  # The flex program this site is enrolled in. Contract terms, not tuning knobs: depth and
+  # duration are the ERCOT "heavy" tier edp-api sizes the pack against (its flex_levels.heavy is
+  # 100% depth / 4h / 20h interval), and enrolledPeakKw is the site's own contracted grid peak.
+  # minIntervalHours is the term the plant's recharge rate was sized to refill inside, so calling
+  # again sooner asks for energy it was never built to have back.
+  flexDepthPercent: 100.0
+  flexEnrolledPeakKw: 1120.0
+  flexMaxDurationHours: 4.0
+  flexMinIntervalHours: 20.0
 
 beta: &beta
   logLevel: INFO
@@ -47,6 +56,15 @@ beta: &beta
   zoneStressThresholdMw: 1800.0
   zoneStressMarginBoostAmps: 25.0
   envelopeScheduleEnabled: true
+  # The flex program this site is enrolled in. Contract terms, not tuning knobs: depth and
+  # duration are the ERCOT "heavy" tier edp-api sizes the pack against (its flex_levels.heavy is
+  # 100% depth / 4h / 20h interval), and enrolledPeakKw is the site's own contracted grid peak.
+  # minIntervalHours is the term the plant's recharge rate was sized to refill inside, so calling
+  # again sooner asks for energy it was never built to have back.
+  flexDepthPercent: 100.0
+  flexEnrolledPeakKw: 1120.0
+  flexMaxDurationHours: 4.0
+  flexMinIntervalHours: 20.0
 
 # The full device demo: this service inside the compose stack, driven by a real DLR rating and line
 # loading, so a curtailment runs end to end. Merged from beta for the container hostnames rather than
@@ -58,3 +76,8 @@ device-demo:
   <<: *beta
   siteId: device_demo_site
   maxEventDurationHours: 0.1
+  # Reason: same six-minute window as maxEventDurationHours above, for the same reason — a flex
+  # call has to reach its own COMPLETED on camera so the release is visible, not four hours later.
+  # The depth is NOT shortened: what the utility is entitled to ask for is the contract's, and a
+  # demo that commands less than the real program would be showing a product nobody is buying.
+  flexMaxDurationHours: 0.1

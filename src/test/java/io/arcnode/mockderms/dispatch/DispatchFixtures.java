@@ -50,7 +50,11 @@ final class DispatchFixtures {
         "https://example.invalid/archive",
         THRESHOLD_MW,
         25.0,
-        envelopeScheduleEnabled);
+        envelopeScheduleEnabled,
+        100.0,
+        1120.0,
+        4.0,
+        20.0);
   }
 
   /** Advanceable fake — same pattern as EventOrchestratorTest's own MutableClock. */

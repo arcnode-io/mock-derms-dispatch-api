@@ -87,7 +87,11 @@ public record Config(
     @NotBlank String ercotArchiveUrl,
     double zoneStressThresholdMw,
     double zoneStressMarginBoostAmps,
-    boolean envelopeScheduleEnabled) {
+    boolean envelopeScheduleEnabled,
+    double flexDepthPercent,
+    double flexEnrolledPeakKw,
+    double flexMaxDurationHours,
+    double flexMinIntervalHours) {
 
   /** Log levels accepted in {@code cfg.yml} — mirrors the sibling templates. */
   public enum LogLevel {
