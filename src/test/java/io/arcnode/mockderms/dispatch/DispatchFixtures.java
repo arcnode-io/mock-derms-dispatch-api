@@ -47,6 +47,7 @@ final class DispatchFixtures {
         4.0,
         "dlr_rtu_demo",
         "https://example.invalid/token",
+        "someone@example.invalid",
         "https://example.invalid/archive",
         THRESHOLD_MW,
         25.0,

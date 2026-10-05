@@ -84,6 +84,7 @@ public record Config(
     double maxEventDurationHours,
     @NotBlank String dlrDeviceId,
     @NotBlank String ercotTokenUrl,
+    @NotBlank String ercotUsername,
     @NotBlank String ercotArchiveUrl,
     double zoneStressThresholdMw,
     double zoneStressMarginBoostAmps,

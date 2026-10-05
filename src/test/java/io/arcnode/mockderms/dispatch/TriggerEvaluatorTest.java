@@ -29,6 +29,7 @@ class TriggerEvaluatorTest {
           4.0,
           "dlr_rtu_demo",
           "https://example.invalid/token",
+          "someone@example.invalid",
           "https://example.invalid/archive",
           1800.0,
           25.0,

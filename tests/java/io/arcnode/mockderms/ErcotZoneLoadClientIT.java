@@ -1,9 +1,11 @@
 package io.arcnode.mockderms;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.status;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -44,8 +46,12 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
   @DynamicPropertySource
   static void downstream(DynamicPropertyRegistry registry) {
     registry.add("app.ercotTokenUrl", () -> wiremock.baseUrl() + "/oauth2/token");
+    registry.add("app.ercotUsername", () -> CONFIGURED_USERNAME);
     registry.add("app.ercotArchiveUrl", () -> wiremock.baseUrl() + "/archive/np3-562-cd");
   }
+
+  /** Deliberately not the real account, so a hardcoded one cannot satisfy the assertion. */
+  private static final String CONFIGURED_USERNAME = "someone-else@example.invalid";
 
   @Autowired ErcotZoneLoadClient client;
 
@@ -135,6 +141,27 @@ class ErcotZoneLoadClientIT extends AbstractBrokerIT {
     // sharing that thread, which stops evaluating entirely with nothing logged.
     assertThat(result).isEmpty();
     assertThat(waited).isLessThan(UNANSWERED);
+  }
+
+  @Test
+  void authenticatesAsTheConfiguredAccountRatherThanABuiltInOne() {
+    // Arrange: a successful auth, so the only thing under test is which account was sent
+    wiremock.stubFor(
+        post("/oauth2/token")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"id_token\": \"fake-token\"}")));
+
+    // Act
+    client.currentNorthZoneLoadMw();
+
+    // Assert: the ROPC username is whose ERCOT account this is, which differs per deployment and
+    // belongs in config — not compiled into the artifact every deployment shares.
+    wiremock.verify(
+        postRequestedFor(urlPathEqualTo("/oauth2/token"))
+            .withRequestBody(containing("username=" + CONFIGURED_USERNAME.replace("@", "%40"))));
   }
 
   @Test

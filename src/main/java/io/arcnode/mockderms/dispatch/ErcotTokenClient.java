@@ -28,12 +28,12 @@ public class ErcotTokenClient {
   private static final String SCOPE = "openid fec253ea-0d06-4272-a5e6-b478baeecd70 offline_access";
   // Reason: this is the registered ERCOT account's username, not a secret — the password and
   // subscription key are what's actually sensitive, both in template-secrets.env.
-  static final String USERNAME = "joe@arketyped.net";
   // Reason: real tokens are valid 1h with no refresh; re-authenticate this much early so an
   // in-flight request never straddles expiry.
   private static final long REFRESH_MARGIN_SECONDS = 300;
 
   private final RestClient client;
+  private final String username;
   private final String password;
   private final Clock clock;
   private final AtomicReference<@Nullable CachedToken> cached = new AtomicReference<>();
@@ -66,6 +66,10 @@ public class ErcotTokenClient {
       Clock clock) {
     this.client =
         builder.requestFactory(boundedRequestFactory()).baseUrl(config.ercotTokenUrl()).build();
+    // Reason: whose ERCOT account this is differs per deployment, so it is config rather than
+    // something compiled into the artifact every deployment shares. Not a secret — it is an
+    // identifier, and the password it pairs with stays in the environment.
+    this.username = config.ercotUsername();
     this.password = password;
     this.clock = clock;
   }
@@ -82,7 +86,7 @@ public class ErcotTokenClient {
 
   private String authenticate(Instant now) {
     MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-    form.add("username", USERNAME);
+    form.add("username", username);
     form.add("password", password);
     form.add("grant_type", "password");
     form.add("scope", SCOPE);
