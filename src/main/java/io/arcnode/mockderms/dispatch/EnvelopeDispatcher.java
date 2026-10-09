@@ -65,7 +65,8 @@ public class EnvelopeDispatcher {
             "ACTIVE",
             new DerEventRequest.Interval(now, WINDOW_SECONDS),
             new DerEventRequest.ControlBase(null, null, importLimitWatts, EXPORT_LIMIT_WATTS)),
-        now);
+        now,
+        DerPrograms.LINE_CONSTRAINT);
   }
 
   /**

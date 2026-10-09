@@ -30,7 +30,26 @@ class SubscriptionRegistryTest {
     SubscriptionRegistry registry = new SubscriptionRegistry();
 
     // Act / Assert
-    assertThat(registry.active()).isEmpty();
+    assertThat(registry.forProgram("/derp/1/derc")).isEmpty();
+  }
+
+  @Test
+  void keepsOneSubscriptionPerProgramSoEachPurposeHasItsOwnDestination() {
+    // Arrange: a site enrolled in two of this utility's programs registers against both
+    SubscriptionRegistry registry = new SubscriptionRegistry();
+    SubscriptionElement constraint = subscription(NOTIFICATION_URI);
+    SubscriptionElement flex = subscription(NOTIFICATION_URI);
+    flex.setSubscribedResource("https://utility.invalid/derp/2/derc");
+
+    // Act
+    String constraintId = registry.register(constraint);
+    String flexId = registry.register(flex);
+
+    // Assert: neither displaces the other, and each is addressable by its program
+    assertThat(registry.forProgram("/derp/1/derc").orElseThrow().id()).isEqualTo(constraintId);
+    assertThat(registry.forProgram("/derp/2/derc").orElseThrow().id()).isEqualTo(flexId);
+    assertThat(constraintId).isNotEqualTo(flexId);
+    assertThat(registry.forProgram("/derp/9/derc")).isEmpty();
   }
 
   @Test
@@ -42,9 +61,10 @@ class SubscriptionRegistryTest {
     String id = registry.register(subscription(NOTIFICATION_URI));
 
     // Assert
-    assertThat(registry.active()).isPresent();
-    assertThat(registry.active().orElseThrow().notificationUri()).isEqualTo(NOTIFICATION_URI);
-    assertThat(registry.active().orElseThrow().id()).isEqualTo(id);
+    assertThat(registry.forProgram("/derp/1/derc")).isPresent();
+    assertThat(registry.forProgram("/derp/1/derc").orElseThrow().notificationUri())
+        .isEqualTo(NOTIFICATION_URI);
+    assertThat(registry.forProgram("/derp/1/derc").orElseThrow().id()).isEqualTo(id);
   }
 
   @Test
@@ -68,7 +88,7 @@ class SubscriptionRegistryTest {
     registry.register(subscription("https://site.invalid/moved"));
 
     // Assert
-    assertThat(registry.active().orElseThrow().notificationUri())
+    assertThat(registry.forProgram("/derp/1/derc").orElseThrow().notificationUri())
         .isEqualTo("https://site.invalid/moved");
   }
 }

@@ -96,7 +96,8 @@ public class FlexCallDispatcher {
             interval,
             // Energize stays true: a flex call curtails, it does not disconnect the site.
             new DerEventRequest.ControlBase(targetWatts, true, null, null)),
-        now);
+        now,
+        DerPrograms.FLEX);
     openCall.set(new OpenCall(mrid, now, interval));
     if (LOG.isInfoEnabled()) {
       LOG.info(
@@ -120,7 +121,8 @@ public class FlexCallDispatcher {
             "COMPLETED",
             current.interval(),
             new DerEventRequest.ControlBase(null, null, null, null)),
-        clock.instant());
+        clock.instant(),
+        DerPrograms.FLEX);
     openCall.set(null);
     lastCallEndedAt.set(clock.instant());
     if (LOG.isInfoEnabled()) {

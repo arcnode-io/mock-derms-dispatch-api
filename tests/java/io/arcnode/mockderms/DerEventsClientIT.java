@@ -10,6 +10,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.arcnode.mockderms.dispatch.DerEventsClient;
+import io.arcnode.mockderms.dispatch.DerPrograms;
 import io.arcnode.mockderms.dispatch.MockUtilityIdentity;
 import io.arcnode.mockderms.dispatch.SubscriptionRegistry;
 import io.arcnode.mockderms.dispatch.dto.DerEventRequest;
@@ -79,7 +80,7 @@ class DerEventsClientIT extends AbstractBrokerIT {
     wiremock.stubFor(post("/der-events").willReturn(status(201)));
 
     // Act
-    client.dispatch(request(), CREATED_AT);
+    client.dispatch(request(), CREATED_AT, DerPrograms.LINE_CONSTRAINT);
 
     // Assert
     wiremock.verify(

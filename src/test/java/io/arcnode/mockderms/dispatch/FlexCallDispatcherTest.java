@@ -34,7 +34,7 @@ class FlexCallDispatcherTest {
 
   private DerEventRequest captureOne() {
     ArgumentCaptor<DerEventRequest> sent = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client).dispatch(sent.capture(), any());
+    verify(client).dispatch(sent.capture(), any(), any());
     return sent.getValue();
   }
 
@@ -55,6 +55,9 @@ class FlexCallDispatcherTest {
     // for them, so adding one here would silently put this back on the envelope path.
     assertThat(sent.derControlBase().opModImpLimW()).isNull();
     assertThat(sent.derControlBase().opModExpLimW()).isNull();
+    // Reason: the program is how the site learns what kind of event this is — a flex call is
+    // issued under the flex program, never under the line-constraint one.
+    verify(client).dispatch(any(), any(), org.mockito.ArgumentMatchers.eq(DerPrograms.FLEX));
   }
 
   @Test
@@ -66,7 +69,7 @@ class FlexCallDispatcherTest {
     dispatcher().tick();
 
     // Assert: this program is called on system need, not on a timer
-    verify(client, never()).dispatch(any(), any());
+    verify(client, never()).dispatch(any(), any(), any());
   }
 
   @Test
@@ -84,7 +87,7 @@ class FlexCallDispatcherTest {
     // Assert: same mRID with a terminal status is how an event is closed — der-control-api derives
     // event_active rather than exposing it, so a consumer only releases when the event itself ends
     ArgumentCaptor<DerEventRequest> sent = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client, times(2)).dispatch(sent.capture(), any());
+    verify(client, times(2)).dispatch(sent.capture(), any(), any());
     DerEventRequest close = sent.getAllValues().get(1);
     assertThat(close.mrid()).isEqualTo(openedMrid);
     assertThat(close.eventStatus()).isEqualTo("COMPLETED");
@@ -106,6 +109,6 @@ class FlexCallDispatcherTest {
     // Assert: the minimum interval between events is a contract term, and it is the term the
     // site's recharge rate was sized against — calling again sooner asks for energy the plant was
     // never built to have refilled. Two dispatches, not three.
-    verify(client, times(2)).dispatch(any(), any());
+    verify(client, times(2)).dispatch(any(), any(), any());
   }
 }

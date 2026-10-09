@@ -150,7 +150,8 @@ public class EventOrchestrator {
             // envelope (opModImpLimW, sent continuously by EnvelopeDispatcher) is the
             // constraint. Energize stays, since the site remains connected.
             new DerEventRequest.ControlBase(null, true, null, null)),
-        now);
+        now,
+        DerPrograms.LINE_CONSTRAINT);
     activeEvent.set(new ActiveEvent(mrid, now, interval, requiredReductionWatts));
     consecutiveRecoveryTicks.set(0);
     LOG.info(
@@ -192,7 +193,8 @@ public class EventOrchestrator {
             eventStatus,
             current.interval(),
             new DerEventRequest.ControlBase(null, null, null, null)),
-        clock.instant());
+        clock.instant(),
+        DerPrograms.LINE_CONSTRAINT);
     activeEvent.set(null);
     consecutiveRecoveryTicks.set(0);
     if (LOG.isInfoEnabled()) {

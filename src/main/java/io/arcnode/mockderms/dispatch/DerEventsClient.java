@@ -51,9 +51,11 @@ public class DerEventsClient {
    * Constraint dispatch (trigger fired) or event close (a terminal EventStatus on the same mRID).
    *
    * @param creationTime when this control was created — {@code Event::creationTime} is mandatory
+   * @param programPath the {@link DerPrograms} path this control is issued under
    */
-  public void dispatch(DerEventRequest request, Instant creationTime) {
-    SubscriptionRegistry.Registered subscription = subscriptions.active().orElse(null);
+  public void dispatch(DerEventRequest request, Instant creationTime, String programPath) {
+    SubscriptionRegistry.Registered subscription =
+        subscriptions.forProgram(programPath).orElse(null);
     if (subscription == null) {
       if (LOG.isWarnEnabled()) {
         LOG.warn(

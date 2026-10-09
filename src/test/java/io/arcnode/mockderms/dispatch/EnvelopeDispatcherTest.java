@@ -41,7 +41,7 @@ class EnvelopeDispatcherTest {
 
   private DerEventRequest captureSent() {
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client).dispatch(request.capture(), any());
+    verify(client).dispatch(request.capture(), any(), any());
     return request.getValue();
   }
 
@@ -94,7 +94,7 @@ class EnvelopeDispatcherTest {
 
     // Assert: a fresh mRID per tick would accumulate a new event row every five seconds
     ArgumentCaptor<DerEventRequest> request = ArgumentCaptor.forClass(DerEventRequest.class);
-    verify(client, org.mockito.Mockito.times(2)).dispatch(request.capture(), any());
+    verify(client, org.mockito.Mockito.times(2)).dispatch(request.capture(), any(), any());
     assertThat(request.getAllValues().get(0).mrid())
         .isEqualTo(request.getAllValues().get(1).mrid());
   }
@@ -125,7 +125,7 @@ class EnvelopeDispatcherTest {
     dispatcher(false).publish(200.0, 100.0, LOCAL_MARGIN);
 
     // Assert
-    verify(client, never()).dispatch(any(), any());
+    verify(client, never()).dispatch(any(), any(), any());
   }
 
   @Test
